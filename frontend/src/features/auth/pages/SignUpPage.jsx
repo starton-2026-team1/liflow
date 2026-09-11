@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Check, Eye, EyeOff } from 'lucide-react'
 import BackButton from '../../../components/common/BackButton'
 import UnderlinedInput from '../../../components/common/UnderlinedInput'
-import { getEmailError, isValidEmail } from '../utils/emailValidation'
+import { getEmailError, isValidEmail, shouldAutoConfirmEmail } from '../utils/emailValidation'
 import '../styles/login.css'
 import '../styles/signup.css'
 
@@ -37,7 +37,7 @@ function SignUpPage({ onBack, onSignUp }) {
     setEmail(nextEmail)
     setEmailError('')
 
-    if (isValidEmail(nextEmail)) {
+    if (shouldAutoConfirmEmail(nextEmail)) {
       setEmailConfirmed(true)
     }
   }

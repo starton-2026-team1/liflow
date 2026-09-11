@@ -40,3 +40,12 @@ export function getEmailError(value) {
 export function isValidEmail(value) {
   return getEmailError(value) === ''
 }
+
+export function shouldAutoConfirmEmail(value) {
+  if (!isValidEmail(value)) {
+    return false
+  }
+
+  const topLevelDomain = value.slice(value.lastIndexOf('.') + 1).toLowerCase()
+  return topLevelDomain !== 'co'
+}
