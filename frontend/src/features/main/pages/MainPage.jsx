@@ -24,6 +24,9 @@ import emptyMascot from '../../../assets/mascot/empty.png'
 import NoticeToast from '../../../components/common/NoticeToast'
 import ConfirmDialog from '../../../components/common/ConfirmDialog'
 import DetailActionButtons from '../../../components/common/DetailActionButtons'
+import BackButton from '../../../components/common/BackButton'
+import StepFormLayout from '../../../components/common/StepFormLayout'
+import UnderlinedInput from '../../../components/common/UnderlinedInput'
 import PersonRegistrationPage from '../../people/pages/PersonRegistrationPage'
 import SensorRegistrationPage from '../../sensor/pages/SensorRegistrationPage'
 import HomeDashboard from '../components/HomeDashboard'
@@ -125,6 +128,7 @@ function HomePage({ hasSensor, onAddPerson, onConnectSensor, onStartRecording, p
 function ProfilePage({ onLogout, onThemeChange, onUserUpdate, theme, user }) {
   const [showThemeDialog, setShowThemeDialog] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
+  const [editMode, setEditMode] = useState('menu')
   const [email, setEmail] = useState(user?.email || '')
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
@@ -140,6 +144,7 @@ function ProfilePage({ onLogout, onThemeChange, onUserUpdate, theme, user }) {
     setCurrentPassword('')
     setNewPassword('')
     setError('')
+    setEditMode('menu')
   }
 
   const handleSubmit = async (event) => {
@@ -147,9 +152,26 @@ function ProfilePage({ onLogout, onThemeChange, onUserUpdate, theme, user }) {
     setError('')
 
     const normalizedEmail = email.trim()
-    const emailChanged = normalizedEmail !== user?.email
-    if (!emailChanged && !newPassword) {
-      setError('변경할 이메일 또는 새 비밀번호를 입력해 주세요.')
+    if (editMode === 'email' && !normalizedEmail) {
+      setError('바꿀 이메일을 입력해 주세요.')
+      return
+    }
+
+    const emailChanged = editMode === 'email' && normalizedEmail !== user?.email
+    if (!currentPassword) {
+      setError('현재 비밀번호를 입력해 주세요.')
+      return
+    }
+    if (newPassword && newPassword.length < 8) {
+      setError('새 비밀번호는 8자 이상 입력해 주세요.')
+      return
+    }
+    if (editMode === 'email' && !emailChanged) {
+      setError('변경할 이메일을 입력해 주세요.')
+      return
+    }
+    if (editMode === 'password' && !newPassword) {
+      setError('새 비밀번호를 입력해 주세요.')
       return
     }
 
@@ -162,6 +184,7 @@ function ProfilePage({ onLogout, onThemeChange, onUserUpdate, theme, user }) {
       })
       setCurrentPassword('')
       setNewPassword('')
+      setEditMode('menu')
       setIsEditing(false)
     } catch (requestError) {
       setError(requestError.message || '내 정보를 수정하지 못했어요.')
@@ -171,32 +194,102 @@ function ProfilePage({ onLogout, onThemeChange, onUserUpdate, theme, user }) {
   }
 
   if (isEditing) {
-    return (
-      <div className="profile-view">
-        <header className="page-header profile-edit__header">
-          <button type="button" onClick={() => { resetForm(); setIsEditing(false) }}>취소</button>
-          <h1>내 정보 수정</h1>
-          <span aria-hidden="true" />
-        </header>
+    if (editMode === 'menu') {
+      return (
+        <div className="profile-edit-menu">
+          <header className="profile-edit-menu__header">
+            <BackButton onClick={() => { resetForm(); setIsEditing(false) }} />
+          </header>
 
-        <form className="profile-edit" onSubmit={handleSubmit}>
-          <label>
-            이메일
-            <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" required />
-          </label>
-          <label>
-            현재 비밀번호
-            <input type="password" value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} autoComplete="current-password" required />
-          </label>
-          <label>
-            새 비밀번호 <small>변경할 때만 입력</small>
-            <input type="password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} autoComplete="new-password" minLength="8" placeholder="8자 이상" />
-          </label>
-          {error && <p className="profile-edit__error" role="alert">{error}</p>}
-          <button className="primary-action primary-action--wide" type="submit" disabled={isSaving}>
-            {isSaving ? '저장 중...' : '변경사항 저장'}
-          </button>
-        </form>
+          <section className="settings-section profile-edit-menu__section" aria-labelledby="profile-edit-menu-title">
+            <h2 id="profile-edit-menu-title">계정 정보</h2>
+            <div className="settings-list">
+              <button type="button" onClick={() => { setEditMode('email'); setError('') }}>
+                <span className="settings-list__label">이메일 변경</span>
+                <ChevronRight aria-hidden="true" />
+              </button>
+              <button type="button" onClick={() => { setEditMode('password'); setError('') }}>
+                <span className="settings-list__label">비밀번호 변경</span>
+                <ChevronRight aria-hidden="true" />
+              </button>
+            </div>
+          </section>
+        </div>
+      )
+    }
+
+    return (
+      <div className="profile-edit-flow">
+        <StepFormLayout
+          ariaLabel="내 정보 수정"
+          currentStep={0}
+          totalSteps={1}
+          onBack={() => {
+            setCurrentPassword('')
+            setNewPassword('')
+            setError('')
+            setEditMode('menu')
+          }}
+          onSubmit={handleSubmit}
+          actionDisabled={isSaving}
+          actionLabel={isSaving ? '저장 중...' : '변경사항 저장'}
+        >
+          {editMode === 'email' ? (
+            <>
+              <p className="profile-edit-flow__eyebrow">이메일 변경</p>
+              <h1 className="step-form-question">바꿀 이메일을<br />입력해 주세요.</h1>
+              <p className="step-form-description">안전한 정보 변경을 위해 현재 비밀번호도 입력해 주세요.</p>
+              <div className="profile-edit-flow__passwords">
+                <UnderlinedInput
+                  id="profile-email"
+                  type="email"
+                  value={email}
+                  placeholder="바꿀 이메일"
+                  autoComplete="email"
+                  autoFocus
+                  onChange={(event) => { setEmail(event.target.value); setError('') }}
+                  action={email.trim() ? <Check className="input-check" aria-label="입력 완료" /> : null}
+                />
+                <UnderlinedInput
+                  id="profile-email-current-password"
+                  type="password"
+                  value={currentPassword}
+                  placeholder="현재 비밀번호"
+                  autoComplete="current-password"
+                  onChange={(event) => { setCurrentPassword(event.target.value); setError('') }}
+                />
+              </div>
+              {error && <p className="step-form-server-error" role="alert">{error}</p>}
+            </>
+          ) : (
+            <>
+              <p className="profile-edit-flow__eyebrow">비밀번호 변경</p>
+              <h1 className="step-form-question">새 비밀번호를<br />설정해 주세요.</h1>
+              <p className="step-form-description">안전한 정보 변경을 위해 현재 비밀번호가 필요해요.</p>
+              <div className="profile-edit-flow__passwords">
+                <UnderlinedInput
+                  id="profile-current-password"
+                  type="password"
+                  value={currentPassword}
+                  placeholder="현재 비밀번호"
+                  autoComplete="current-password"
+                  autoFocus
+                  onChange={(event) => { setCurrentPassword(event.target.value); setError('') }}
+                />
+                <UnderlinedInput
+                  id="profile-new-password"
+                  type="password"
+                  value={newPassword}
+                  placeholder="새 비밀번호 (8자 이상)"
+                  autoComplete="new-password"
+                  minLength="8"
+                  onChange={(event) => { setNewPassword(event.target.value); setError('') }}
+                />
+              </div>
+              {error && <p className="step-form-server-error" role="alert">{error}</p>}
+            </>
+          )}
+        </StepFormLayout>
       </div>
     )
   }
