@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Any
 
 from httpx import AsyncClient
 
@@ -50,8 +51,17 @@ async def test_device_event_requires_valid_api_key(client: AsyncClient) -> None:
 
 
 async def test_device_event_is_saved_and_duplicate_is_idempotent(
-    client: AsyncClient, auth_headers: dict[str, str]
+    client: AsyncClient, auth_headers: dict[str, str], monkeypatch: Any
 ) -> None:
+    published_events: list[tuple[int, dict[str, Any]]] = []
+
+    async def capture_event(user_id: int, event: dict[str, Any]) -> None:
+        published_events.append((user_id, event))
+
+    monkeypatch.setattr(
+        "app.api.v1.device_events.realtime_event_manager.publish_sensor_event",
+        capture_event,
+    )
     person_id, sensor_id = await register_sensor(
         client, auth_headers, device_id="DEVICE-001"
     )
@@ -76,7 +86,38 @@ async def test_device_event_is_saved_and_duplicate_is_idempotent(
     assert created.json()["event_id"] == data["event_id"]
     assert duplicate.status_code == 200
     assert duplicate.json()["id"] == created.json()["id"]
+    assert len(published_events) == 1
+    assert published_events[0][1]["type"] == "sensor_event.created"
+    assert published_events[0][1]["data"]["id"] == created.json()["id"]
 
+    events = await client.get("/api/v1/sensor-events", headers=auth_headers)
+    assert len(events.json()) == 1
+
+
+async def test_device_event_is_saved_when_realtime_publish_fails(
+    client: AsyncClient, auth_headers: dict[str, str], monkeypatch: Any
+) -> None:
+    await register_sensor(client, auth_headers, device_id="DEVICE-PUBLISH-FAIL")
+
+    async def fail_to_publish(_user_id: int, _event: dict[str, Any]) -> None:
+        raise RuntimeError("realtime service unavailable")
+
+    monkeypatch.setattr(
+        "app.api.v1.device_events.realtime_event_manager.publish_sensor_event",
+        fail_to_publish,
+    )
+    response = await client.post(
+        "/api/v1/device-events",
+        headers={"X-Device-Key": "test-device-api-key"},
+        json={
+            "event_id": "event-publish-fail",
+            "device_id": "DEVICE-PUBLISH-FAIL",
+            "detected_at": datetime.now().isoformat(),
+            "detected_value": "OPEN",
+        },
+    )
+
+    assert response.status_code == 201
     events = await client.get("/api/v1/sensor-events", headers=auth_headers)
     assert len(events.json()) == 1
 
