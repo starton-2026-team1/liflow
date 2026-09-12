@@ -1,12 +1,13 @@
 from secrets import compare_digest
 from typing import Annotated
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends
 from fastapi.security import APIKeyHeader, HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.database import get_db_session
+from app.core.errors import AppError, ErrorCode
 from app.core.security import decode_access_token
 from app.models.user import User
 from app.repositories.user_repository import get_user_by_id
@@ -25,9 +26,8 @@ async def get_current_user(
     )
     user = await get_user_by_id(session, user_id) if user_id is not None else None
     if user is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired token",
+        raise AppError(
+            ErrorCode.AUTH_INVALID_TOKEN,
             headers={"WWW-Authenticate": "Bearer"},
         )
     return user
@@ -42,12 +42,6 @@ async def verify_device_api_key(
     api_key: Annotated[str | None, Depends(device_api_key_header)],
 ) -> None:
     if not settings.device_api_key:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Device API key is not configured",
-        )
+        raise AppError(ErrorCode.DEVICE_API_KEY_NOT_CONFIGURED)
     if api_key is None or not compare_digest(api_key, settings.device_api_key):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid device API key",
-        )
+        raise AppError(ErrorCode.DEVICE_INVALID_API_KEY)

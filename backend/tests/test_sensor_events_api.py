@@ -65,4 +65,6 @@ async def test_sensor_event_rejects_missing_relations(
         headers=auth_headers,
     )
     assert response.status_code == 404
-    assert response.json()["detail"] == "Person not found"
+    body = response.json()
+    assert body["code"] == "PERSON_NOT_FOUND"
+    assert body["detail"] == "대상자를 찾을 수 없습니다."

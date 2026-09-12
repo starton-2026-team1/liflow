@@ -1,7 +1,7 @@
-from fastapi import HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.errors import AppError, ErrorCode
 from app.models.sensor import Sensor
 from app.repositories.person_repository import get_owned_person
 from app.repositories.sensor_repository import (
@@ -19,7 +19,7 @@ async def find_sensor_or_404(
 ) -> Sensor:
     sensor = await get_sensor(session, sensor_id, user_id)
     if sensor is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Sensor not found")
+        raise AppError(ErrorCode.SENSOR_NOT_FOUND)
     return sensor
 
 
@@ -28,9 +28,7 @@ async def find_owned_sensor_or_404(
 ) -> Sensor:
     sensor = await get_owned_sensor(session, sensor_id, user_id)
     if sensor is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Sensor not found"
-        )
+        raise AppError(ErrorCode.SENSOR_NOT_FOUND)
     return sensor
 
 
@@ -38,17 +36,12 @@ async def register_sensor(
     session: AsyncSession, user_id: int, data: SensorCreate
 ) -> Sensor:
     if await get_owned_person(session, data.person_id, user_id) is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Person not found"
-        )
+        raise AppError(ErrorCode.PERSON_NOT_FOUND)
     try:
         return await create_sensor(session, data)
 
     except IntegrityError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="device_id is already registered",
-        ) from exc
+        raise AppError(ErrorCode.SENSOR_DEVICE_ID_CONFLICT) from exc
 
 
 async def update_registered_sensor(
@@ -57,17 +50,12 @@ async def update_registered_sensor(
     sensor = await find_owned_sensor_or_404(session, sensor_id, user_id)
     if data.person_id is not None:
         if await get_owned_person(session, data.person_id, user_id) is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Person not found"
-            )
+            raise AppError(ErrorCode.PERSON_NOT_FOUND)
     try:
         return await update_sensor(session, sensor, data)
 
     except IntegrityError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="device_id is already registered",
-        ) from exc
+        raise AppError(ErrorCode.SENSOR_DEVICE_ID_CONFLICT) from exc
 
 
 async def remove_sensor(session: AsyncSession, sensor_id: int, user_id: int) -> None:

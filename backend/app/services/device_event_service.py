@@ -1,7 +1,7 @@
-from fastapi import HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.errors import AppError, ErrorCode
 from app.models.sensor_event import SensorEvent
 from app.repositories.sensor_event_repository import (
     create_device_sensor_event,
@@ -16,9 +16,7 @@ async def record_device_event(
 ) -> tuple[SensorEvent, bool]:
     sensor = await get_sensor_by_device_id(session, data.device_id)
     if sensor is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Sensor not found"
-        )
+        raise AppError(ErrorCode.SENSOR_NOT_FOUND)
 
     existing = await get_sensor_event_by_external_id(session, data.event_id)
     if existing is not None:
@@ -26,17 +24,11 @@ async def record_device_event(
             existing.sensor_id != sensor.id
             or existing.detected_value != data.detected_value
         ):
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="event_id is already used for different data",
-            )
+            raise AppError(ErrorCode.EVENT_ID_CONFLICT)
         return existing, False
 
     if sensor.status.upper() != "CONNECTED":
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Sensor is not connected",
-        )
+        raise AppError(ErrorCode.SENSOR_NOT_CONNECTED)
 
     try:
         async with session.begin_nested():
@@ -56,8 +48,5 @@ async def record_device_event(
             existing.sensor_id != sensor.id
             or existing.detected_value != data.detected_value
         ):
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="event_id is already used for different data",
-            ) from exc
+            raise AppError(ErrorCode.EVENT_ID_CONFLICT) from exc
         return existing, False
