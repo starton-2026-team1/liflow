@@ -43,6 +43,14 @@ async def get_owned_person(
     )
 
 
+async def get_person_owner_id(
+    session: AsyncSession, person_id: int
+) -> int | None:
+    return await session.scalar(
+        select(Person.user_id).where(Person.id == person_id)
+    )
+
+
 async def update_person(session: AsyncSession, person: Person, data: PersonUpdate) -> Person:
     for key, value in data.model_dump(exclude_unset=True).items():
         setattr(person, key, value)

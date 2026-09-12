@@ -16,6 +16,7 @@ import {
   X,
 } from 'lucide-react'
 import { createPerson, deletePerson, getPeople, updatePerson, updatePersonMonitoringStatus } from '../../../api/people'
+import { connectSensorEventStream } from '../../../api/realtimeEvents'
 import { getSensorEvents } from '../../../api/sensorEvents'
 import { connectSensor, createSensor, deleteSensor, disconnectSensor, getSensors, updateSensor } from '../../../api/sensors'
 import mascot from '../../../assets/mascot.png'
@@ -47,6 +48,14 @@ const profileSections = [
   { title: '기기 및 안전', items: ['안심태그(NFC)'] },
   { title: '지원', items: ['도움말', '이용약관 및 개인정보 처리방침'] },
 ]
+
+const mergeSensorEvents = (...eventGroups) => {
+  const eventsById = new Map()
+  eventGroups.flat().forEach((event) => eventsById.set(event.id, event))
+  return [...eventsById.values()].sort(
+    (left, right) => new Date(right.detectedAt) - new Date(left.detectedAt),
+  )
+}
 
 function EmptyState({ actionLabel, description, onAction, title }) {
   return (
@@ -606,7 +615,7 @@ function MainPage({ onLogout, onUserUpdate, user }) {
         if (!isActive) return
         setRegisteredPeople(people)
         setRegisteredSensors(sensors)
-        setSensorEvents(events)
+        setSensorEvents((currentEvents) => mergeSensorEvents(events, currentEvents))
       })
       .catch((error) => {
         if (isActive) setApiError(error.message || '데이터를 불러오지 못했어요.')
@@ -617,6 +626,15 @@ function MainPage({ onLogout, onUserUpdate, user }) {
 
     return () => { isActive = false }
   }, [])
+
+  useEffect(() => connectSensorEventStream({
+    onEvent: (event) => {
+      setSensorEvents((events) => mergeSensorEvents(event, events))
+    },
+    onFatalError: (error) => {
+      setApiError(error.message || '실시간 연결을 시작하지 못했어요.')
+    },
+  }), [])
 
   useEffect(() => {
     document.documentElement.dataset.appTheme = theme

@@ -18,9 +18,7 @@ def verify_password(password: str, hashed_password: str) -> bool:
 
 
 def create_access_token(user_id: int) -> str:
-    expires_at = datetime.now(UTC) + timedelta(
-        minutes=settings.access_token_expire_minutes
-    )
+    expires_at = datetime.now(UTC) + timedelta(minutes=settings.access_token_expire_minutes)
     return jwt.encode(
         {"sub": str(user_id), "exp": expires_at},
         settings.jwt_secret_key,
@@ -38,4 +36,18 @@ def decode_access_token(token: str) -> int | None:
         subject = payload.get("sub")
         return int(subject) if subject is not None else None
     except (InvalidTokenError, TypeError, ValueError):
+        return None
+
+
+def access_token_expiry(token: str) -> float | None:
+    """Verify expiry for long-lived connections; never trust an unverified JWT."""
+    try:
+        payload = jwt.decode(
+            token,
+            settings.jwt_secret_key,
+            algorithms=[settings.jwt_algorithm],
+            options={"require": ["exp", "sub"]},
+        )
+        return float(payload["exp"])
+    except (InvalidTokenError, TypeError, ValueError, OverflowError):
         return None
