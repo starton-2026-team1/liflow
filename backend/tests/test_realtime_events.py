@@ -1,5 +1,5 @@
 import asyncio
-from json import JSONDecodeError
+import json
 from typing import Any, cast
 
 from fastapi import WebSocketDisconnect
@@ -16,17 +16,20 @@ class FakeWebSocket:
         self.closed_code: int | None = None
         self.send_error: Exception | None = None
         self.send_calls = 0
+        self.headers: dict[str, str] = {}
 
     async def accept(self) -> None:
         self.accepted = True
 
-    async def receive_json(self) -> Any:
+    async def receive(self) -> dict[str, Any]:
         if not self.incoming:
             raise WebSocketDisconnect()
         message = self.incoming.pop(0)
         if isinstance(message, BaseException):
             raise message
-        return message
+        if isinstance(message, str):
+            return {"type": "websocket.receive", "text": message}
+        return {"type": "websocket.receive", "text": json.dumps(message)}
 
     async def send_json(self, message: dict[str, Any]) -> None:
         self.send_calls += 1
@@ -34,14 +37,14 @@ class FakeWebSocket:
             raise self.send_error
         self.sent.append(message)
 
-    async def close(self, code: int) -> None:
+    async def close(self, code: int, reason: str | None = None) -> None:
         self.closed_code = code
 
 
 class SlowWebSocket(FakeWebSocket):
-    async def receive_json(self) -> Any:
+    async def receive(self) -> dict[str, Any]:
         await asyncio.sleep(1)
-        return {}
+        return {"type": "websocket.receive", "text": "{}"}
 
 
 async def test_realtime_stream_authenticates_and_removes_disconnected_client(
@@ -53,40 +56,41 @@ async def test_realtime_stream_authenticates_and_removes_disconnected_client(
         return 7
 
     monkeypatch.setattr(realtime_events, "authenticate_realtime_token", authenticate)
+    monkeypatch.setattr(realtime_events, "access_token_expiry", lambda _token: 9e12)
     await realtime_events.sensor_event_stream(cast(Any, websocket))
 
     assert websocket.accepted is True
-    assert websocket.sent == [{"type": "authenticated"}]
+    assert websocket.sent == [{"type": "authenticated", "version": 1, "role": "guardian"}]
 
     await realtime_events.realtime_event_manager.publish_sensor_event(
         7, {"type": "sensor_event.created"}
     )
-    assert websocket.sent == [{"type": "authenticated"}]
+    assert websocket.sent == [{"type": "authenticated", "version": 1, "role": "guardian"}]
 
 
 async def test_realtime_stream_rejects_invalid_authentication(
     monkeypatch: Any,
 ) -> None:
     websocket = FakeWebSocket([{"type": "authenticate", "token": "expired"}])
+
     async def reject_authentication(_token: str | None) -> None:
         return None
 
-    monkeypatch.setattr(
-        realtime_events, "authenticate_realtime_token", reject_authentication
-    )
+    monkeypatch.setattr(realtime_events, "authenticate_realtime_token", reject_authentication)
+    monkeypatch.setattr(realtime_events, "access_token_expiry", lambda _token: 9e12)
     await realtime_events.sensor_event_stream(cast(Any, websocket))
 
     assert websocket.closed_code == 4401
-    assert websocket.sent[0]["error"] == "authentication_failed"
+    assert websocket.sent[0]["error"] == "connection_rejected"
 
 
 async def test_realtime_stream_rejects_invalid_json() -> None:
-    websocket = FakeWebSocket([JSONDecodeError("invalid", "{", 0)])
+    websocket = FakeWebSocket(["{invalid"])
 
     await realtime_events.sensor_event_stream(cast(Any, websocket))
 
     assert websocket.closed_code == 4400
-    assert websocket.sent[0]["error"] == "invalid_message"
+    assert websocket.sent[0]["error"] == "connection_rejected"
 
 
 async def test_realtime_stream_times_out_during_authentication(
@@ -109,9 +113,8 @@ async def test_realtime_stream_closes_when_authentication_service_fails(
     async def fail_authentication(_token: str | None) -> int:
         raise RuntimeError("database unavailable")
 
-    monkeypatch.setattr(
-        realtime_events, "authenticate_realtime_token", fail_authentication
-    )
+    monkeypatch.setattr(realtime_events, "authenticate_realtime_token", fail_authentication)
+    monkeypatch.setattr(realtime_events, "access_token_expiry", lambda _token: 9e12)
     await realtime_events.sensor_event_stream(cast(Any, websocket))
 
     assert websocket.closed_code == 1011
@@ -125,10 +128,12 @@ async def test_realtime_stream_reports_unsupported_messages(monkeypatch: Any) ->
             {"type": "unknown"},
         ]
     )
+
     async def authenticate(_token: str | None) -> int:
         return 7
 
     monkeypatch.setattr(realtime_events, "authenticate_realtime_token", authenticate)
+    monkeypatch.setattr(realtime_events, "access_token_expiry", lambda _token: 9e12)
     await realtime_events.sensor_event_stream(cast(Any, websocket))
 
     assert websocket.sent[1]["error"] == "unsupported_message"
