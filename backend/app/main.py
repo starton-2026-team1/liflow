@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -17,6 +18,7 @@ from app.core.database import (
 )
 from app.core.errors import ERROR_MESSAGES, AppError, ErrorCode
 from app.schemas.error import ErrorFieldResponse, ErrorResponse
+from app.services.alert_monitor_service import run_alert_monitor
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +54,11 @@ def _validation_field_message(error: dict) -> str:
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     await check_database_connection()
+    stop_alert_monitor = asyncio.Event()
+    alert_monitor = asyncio.create_task(run_alert_monitor(stop_alert_monitor))
     yield
+    stop_alert_monitor.set()
+    await alert_monitor
     await close_database_connection()
 
 

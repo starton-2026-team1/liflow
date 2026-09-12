@@ -9,6 +9,9 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 60
     device_api_key: str = ""
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
+    alert_check_interval_seconds: int = 60
+    alert_check_start_hour: int = 0
+    alert_check_end_hour: int = 24
 
     @property
     def allowed_cors_origins(self) -> list[str]:

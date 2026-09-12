@@ -12,6 +12,7 @@
 - **이벤트 수집**: Raspberry Pi 등 외부 장치에서 센서 이벤트 수신 및 중복 저장 방지
 - **기록 확인**: 대상자별 센서 이벤트 기록과 오늘의 타임라인 조회
 - **대시보드**: 대상자의 현재 상태, 최근 활동, 센서 연결 상태를 한눈에 확인
+- **보호자 알림**: 연결 끊김·장시간 미감지·AI 이상 징후를 저장하고 읽음과 안전 확인을 구분
 - **AI 이상행동 감지**: 생활 패턴을 분석해 정상·주의·위험 상태와 판단 근거 제공
 - **NFC 확장**: 센서와 설치 공간의 식별을 보조하는 기능 검토
 
@@ -35,10 +36,17 @@ Raspberry Pi / Sensor
           │                    │
           │ REST API           │ 기록 데이터
           ▼                    ▼
- React + Vite Dashboard   AI Analysis Pipeline (개발 중)
+React + Vite Dashboard   AI Analysis Pipeline (개발 중)
           ▲                    │
           └── 상태·판단 결과 ──┘
 ```
+
+## 알림 설정
+
+- 대상자별 `inactivity_threshold_minutes`로 미감지 기준을 설정합니다(기본 30분).
+- 서버 환경 변수 `ALERT_CHECK_INTERVAL_SECONDS`, `ALERT_CHECK_START_HOUR`,
+  `ALERT_CHECK_END_HOUR`로 점검 주기와 시간대를 설정합니다.
+- DB 반영 전 `cd backend && alembic upgrade head`를 실행합니다.
 
 ## 기술 스택
 
