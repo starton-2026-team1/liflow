@@ -29,8 +29,8 @@ INPUT_DIM = 24 + 6 + len(SENSORS)  # hour + minute_bin + 센서 수
 print("모델 로딩 중...")
 ae        = keras.models.load_model("model/autoencoder.keras")
 lstm      = keras.models.load_model("model/lstm.keras")
-THRESHOLD = float(np.load("data/threshold.npy")[0])
-MSE_MAX   = float(np.load("data/mse_max.npy")[0])
+THRESHOLD = float(np.load("model/threshold.npy")[0])
+MSE_MAX   = float(np.load("model/mse_max.npy")[0])
 print(f"모델 로드 완료 | 임계값: {THRESHOLD:.2f}")
 print(f"   센서 목록: {SENSORS} ({len(SENSORS)}개) | 입력 차원: {INPUT_DIM}\n")
  
