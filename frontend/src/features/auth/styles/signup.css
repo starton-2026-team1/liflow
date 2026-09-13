@@ -1,0 +1,19 @@
+.signup-form {
+  padding-top: clamp(220px, 42dvh, 367px);
+}
+
+.signup-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.signup-fields .confirmed-email {
+  margin-top: 2px;
+}
+
+@media (max-height: 700px) {
+  .signup-form {
+    padding-top: 36dvh;
+  }
+}

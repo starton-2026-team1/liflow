@@ -1,0 +1,23 @@
+.notice-toast {
+  position: fixed;
+  z-index: 20;
+  bottom: calc(102px + env(safe-area-inset-bottom));
+  left: 50%;
+  width: max-content;
+  max-width: calc(100% - 48px);
+  padding: 11px 17px;
+  border-radius: 20px;
+  color: #ffffff;
+  background: rgb(27 35 54 / 90%);
+  box-shadow: 0 8px 20px rgb(16 42 107 / 18%);
+  font-size: 13px;
+  transform: translateX(-50%);
+  animation: notice-in 160ms ease-out;
+}
+
+@keyframes notice-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 6px);
+  }
+}

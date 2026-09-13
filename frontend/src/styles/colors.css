@@ -1,0 +1,31 @@
+:root {
+  --color-background: #f4f6fa;
+  --color-surface: #ffffff;
+  --color-card: #fafbfc;
+  --color-card-border: #e8edf5;
+  --color-navigation: rgb(232 236 243 / 82%);
+  --color-navigation-active: rgb(36 107 253 / 12%);
+  --color-primary: #246bfd;
+  --color-primary-dark: #1554dc;
+  --color-primary-soft: #5477bd;
+  --color-text: #102a6b;
+  --color-placeholder: #7488b1;
+  --color-border: #c8d3e8;
+  --color-border-active: #246bfd;
+  --color-divider: #eef1f5;
+  --color-error: #d43c3c;
+  --color-danger-border: #f0caca;
+  --color-danger-surface: #fff7f7;
+  --color-shadow: rgba(37, 72, 138, 0.08);
+  --card-border: 1px solid var(--color-card);
+  --card-radius: 20px;
+  --card-shadow: 0 6px 18px rgb(16 42 107 / 5%);
+}
+
+:root[data-app-theme='classic'] {
+  --color-background: #ffffff;
+  --color-card: rgb(239 241 246 / 72%);
+  --color-card-border: rgb(255 255 255 / 82%);
+  --color-navigation: rgb(255 255 255 / 92%);
+  --color-navigation-active: rgb(36 107 253 / 10%);
+}

@@ -1,0 +1,180 @@
+.person-registration-page {
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--color-background);
+}
+
+.person-registration-panel {
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: 20px clamp(24px, 8.5vw, 34px) 32px;
+  background: var(--color-background);
+}
+
+.person-registration-header > div {
+  margin-top: 34px;
+}
+
+.person-registration-header h1 {
+  margin: 0;
+  color: var(--color-text);
+  font-size: 29px;
+  font-weight: 800;
+  letter-spacing: -1.1px;
+}
+
+.person-registration-header p {
+  margin: 10px 0 0;
+  color: var(--color-placeholder);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.person-registration-form {
+  display: flex;
+  flex-direction: column;
+  gap: 36px;
+  margin-top: 42px;
+}
+
+.person-registration-section {
+  display: flex;
+  flex-direction: column;
+  gap: 17px;
+}
+
+.person-registration-section h2 {
+  margin: 0 0 2px;
+  color: var(--color-text);
+  font-size: 16px;
+  font-weight: 750;
+  letter-spacing: -0.4px;
+}
+
+.person-registration-form .underlined-input {
+  min-height: 50px;
+  border-bottom-color: var(--color-border);
+}
+
+.person-registration-form .underlined-input:focus-within {
+  border-bottom-color: var(--color-border-active);
+}
+
+.person-registration-form .underlined-input input {
+  font-size: 17px;
+}
+
+.person-registration-form .underlined-input--error {
+  border-bottom-color: var(--color-error);
+}
+
+.dated-input > label {
+  display: block;
+  margin-bottom: -5px;
+  color: var(--color-placeholder);
+  font-size: 12px;
+}
+
+.dated-input input[type='date'] {
+  color-scheme: light;
+}
+
+.section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.section-heading span {
+  color: var(--color-placeholder);
+  font-size: 12px;
+}
+
+.notes-input {
+  padding: 15px 15px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  transition: border-color 160ms ease;
+}
+
+.notes-input:focus-within {
+  border-color: var(--color-border-active);
+}
+
+.notes-input textarea {
+  display: block;
+  width: 100%;
+  min-height: 112px;
+  resize: none;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  color: var(--color-text);
+  background: transparent;
+  font: inherit;
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.notes-input textarea::placeholder {
+  color: var(--color-placeholder);
+  opacity: 0.8;
+}
+
+.notes-input > span {
+  display: block;
+  margin-top: 6px;
+  color: var(--color-placeholder);
+  font-size: 11px;
+  text-align: right;
+}
+
+.person-registration-submit {
+  width: 100%;
+  min-height: 56px;
+  border: 0;
+  border-radius: 28px;
+  color: #ffffff;
+  background: var(--color-primary);
+  box-shadow: 0 8px 20px rgb(36 107 253 / 20%);
+  font: inherit;
+  font-size: 17px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.person-registration-submit:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.person-registration-submit:focus-visible,
+.notes-input textarea:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 3px;
+}
+
+@media (min-width: 601px) {
+  .person-registration-panel {
+    max-width: 402px;
+    margin-inline: auto;
+    box-shadow: 0 0 40px rgb(16 42 107 / 8%);
+  }
+}
+
+.step-notes-input {
+  padding: 15px 15px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+}
+
+.step-notes-input:focus-within { border-color: var(--color-primary); }
+.step-notes-input textarea { display: block; width: 100%; min-height: 130px; resize: none; padding: 0; border: 0; outline: 0; color: var(--color-text); background: transparent; font: inherit; font-size: 16px; line-height: 1.55; }
+.step-notes-input textarea::placeholder { color: var(--color-placeholder); }
+.step-notes-input span { display: block; margin-top: 6px; color: var(--color-placeholder); font-size: 11px; text-align: right; }
+
+.person-step-choices { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.person-step-choices button { display: flex; min-height: 52px; align-items: center; justify-content: space-between; padding: 0 15px; border: 1px solid var(--color-border); border-radius: 15px; color: var(--color-text); background: #fff; font: inherit; font-size: 14px; cursor: pointer; }
+.person-step-choices button.selected { border-color: var(--color-primary); color: var(--color-primary); background: #f3f7ff; font-weight: 700; }
+.person-step-choices svg { width: 18px; }

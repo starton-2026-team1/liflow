@@ -1,0 +1,38 @@
+.detail-action-buttons {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.detail-action-buttons button {
+  min-height: 46px;
+  padding: 0 14px;
+  border: var(--card-border);
+  border-radius: var(--card-radius);
+  color: var(--color-primary);
+  background: var(--color-card);
+  box-shadow: var(--card-shadow);
+  backdrop-filter: blur(14px);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.detail-action-buttons .detail-action-buttons__secondary {
+  border-color: var(--color-card-border);
+  color: var(--color-placeholder);
+  background: var(--color-card);
+  box-shadow: var(--card-shadow);
+}
+
+.detail-action-buttons button:disabled {
+  opacity: 0.52;
+  cursor: not-allowed;
+}
+
+.detail-action-buttons button:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}

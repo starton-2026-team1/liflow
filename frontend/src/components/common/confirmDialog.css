@@ -1,0 +1,98 @@
+.confirm-dialog-backdrop {
+  position: fixed;
+  z-index: 50;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgb(12 20 38 / 42%);
+  backdrop-filter: blur(3px);
+}
+
+.confirm-dialog {
+  width: min(100%, 296px);
+  padding: 19px;
+  border: 1px solid rgb(255 255 255 / 82%);
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 20px 50px rgb(16 42 107 / 20%);
+  animation: confirm-dialog-in 160ms ease-out;
+}
+
+.confirm-dialog h2 {
+  margin: 2px 0 12px;
+  color: var(--color-text);
+  font-size: 19px;
+  text-align: center;
+}
+
+.confirm-dialog p {
+  margin: 0 0 17px;
+  color: var(--color-placeholder);
+  font-size: 12px;
+  line-height: 1.55;
+  text-align: center;
+}
+
+.confirm-dialog__actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.confirm-dialog__actions button {
+  min-height: 48px;
+  padding: 0 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 24px;
+  color: var(--color-text);
+  background: var(--color-surface);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 150ms ease, border-color 150ms ease, transform 150ms ease;
+}
+
+.confirm-dialog__actions .confirm-dialog__confirm {
+  color: var(--color-error);
+  border-color: var(--color-error);
+  background: var(--color-surface);
+  box-shadow: none;
+}
+
+.confirm-dialog__actions button:hover {
+  border-color: var(--color-primary);
+  background: #f3f7ff;
+}
+
+.confirm-dialog__actions .confirm-dialog__confirm:hover {
+  border-color: var(--color-error);
+  background: var(--color-danger-surface);
+}
+
+.confirm-dialog__actions button:active {
+  transform: scale(.98);
+}
+
+.confirm-dialog__actions button:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.confirm-dialog__actions .confirm-dialog__confirm:focus-visible {
+  outline-color: var(--color-error);
+}
+
+.confirm-dialog__actions button:disabled {
+  cursor: wait;
+  opacity: 0.6;
+  transform: none;
+}
+
+@keyframes confirm-dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+}
