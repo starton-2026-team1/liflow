@@ -11,6 +11,20 @@ const getEventTitle = (sensor, event) => {
   return `${sensor?.targetObject || sensor?.name || '센서'} 움직임 감지`
 }
 
+const deduplicateEventsByMinute = (events) => {
+  const seenMinutes = new Set()
+
+  return events.filter((event) => {
+    if (!event.date) return true
+
+    const minute = Math.floor(event.date.getTime() / 60000)
+    if (seenMinutes.has(minute)) return false
+
+    seenMinutes.add(minute)
+    return true
+  })
+}
+
 function PersonSelector({ people, personId, onChange }) {
   if (people.length <= 1) return <span className="history-person-name">{people[0]?.name || '대상자'} 님</span>
 
@@ -79,9 +93,15 @@ export default function HistoryPage({ events, initialTab = 'analysis', people, s
     () => createHistoryAnalysis(selectedPerson, sensors, events),
     [selectedPerson, sensors, events],
   )
-  const filteredEvents = sensorFilter === 'all'
-    ? analysis.recentEvents
-    : analysis.recentEvents.filter(({ sensorId }) => sensorId === sensorFilter)
+  const recentEvents = useMemo(
+    () => deduplicateEventsByMinute(analysis.recentEvents),
+    [analysis.recentEvents],
+  )
+  const filteredEvents = useMemo(() => deduplicateEventsByMinute(
+    sensorFilter === 'all'
+      ? analysis.recentEvents
+      : analysis.recentEvents.filter(({ sensorId }) => sensorId === sensorFilter),
+  ), [analysis.recentEvents, sensorFilter])
 
   return (
     <div className="history-view">
@@ -132,7 +152,7 @@ export default function HistoryPage({ events, initialTab = 'analysis', people, s
               <h2>최근 기록</h2>
               <button type="button" onClick={() => setActiveTab('records')}>전체보기</button>
             </div>
-            <EventRows events={analysis.recentEvents} sensors={sensors} limit={2} />
+            <EventRows events={recentEvents} sensors={sensors} limit={2} />
           </section>
         </div>
       ) : (
