@@ -1,16 +1,27 @@
 import { useState } from 'react'
-import { MessageCircle, Send, X } from 'lucide-react'
+import { Send, X } from 'lucide-react'
+import chatbotMascot from '../../../assets/mascot/qna.png'
+
+const suggestedQuestions = [
+  '일주일치 기록 정리해 줘',
+  '최근 활동에 변화가 있어?',
+  '환절기 건강관리 방법 알려줘',
+  '민간요법 이용 시 주의할 점은?',
+]
 
 function Chatbot() {
   const [isOpen, setIsOpen] = useState(false)
   const [message, setMessage] = useState('')
   const [messages, setMessages] = useState([
-    { id: 1, sender: 'bot', text: '안녕하세요! 무엇을 도와드릴까요?' },
+    {
+      id: 1,
+      sender: 'bot',
+      text: '안녕하세요! 쌓인 생활 기록을 함께 살펴볼게요. 활동 변화나 건강 관련 궁금한 내용을 물어보세요.',
+    },
   ])
 
-  const handleSubmit = (event) => {
-    event.preventDefault()
-    const trimmedMessage = message.trim()
+  const sendMessage = (text) => {
+    const trimmedMessage = text.trim()
     if (!trimmedMessage) return
 
     setMessages((current) => [
@@ -25,12 +36,21 @@ function Chatbot() {
     setMessage('')
   }
 
+  const handleSubmit = (event) => {
+    event.preventDefault()
+    sendMessage(message)
+  }
+
+  const showSuggestions = !messages.some(({ sender }) => sender === 'user')
+
   return (
     <div className={`chatbot${isOpen ? ' chatbot--open' : ''}`}>
       {isOpen && (
         <section className="chatbot-panel" aria-label="살핌이 챗봇">
           <header className="chatbot-panel__header">
-            <span className="chatbot-panel__avatar"><MessageCircle aria-hidden="true" /></span>
+            <span className="chatbot-panel__avatar">
+              <img src={chatbotMascot} alt="" />
+            </span>
             <div>
               <strong>살핌이</strong>
               <span>무엇이든 물어보세요</span>
@@ -46,6 +66,15 @@ function Chatbot() {
                 {item.text}
               </p>
             ))}
+            {showSuggestions && (
+              <div className="chatbot-suggestions" aria-label="추천 질문">
+                {suggestedQuestions.map((question) => (
+                  <button type="button" key={question} onClick={() => sendMessage(question)}>
+                    {question}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           <form className="chatbot-panel__composer" onSubmit={handleSubmit}>
@@ -71,7 +100,7 @@ function Chatbot() {
         aria-expanded={isOpen}
         onClick={() => setIsOpen((open) => !open)}
       >
-        {isOpen ? <X aria-hidden="true" /> : <MessageCircle aria-hidden="true" />}
+        <img src={chatbotMascot} alt="" />
       </button>
     </div>
   )
