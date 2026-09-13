@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import {
   Activity,
   Check,
@@ -22,6 +23,7 @@ import { connectSensor, createSensor, deleteSensor, disconnectSensor, getSensors
 import mascot from '../../../assets/mascot.png'
 import personProfileMascot from '../../../assets/mascot-profile.png'
 import emptyMascot from '../../../assets/mascot/empty.png'
+import qnaMascot from '../../../assets/mascot/qna.png'
 import NoticeToast from '../../../components/common/NoticeToast'
 import ConfirmDialog from '../../../components/common/ConfirmDialog'
 import DetailActionButtons from '../../../components/common/DetailActionButtons'
@@ -31,6 +33,7 @@ import UnderlinedInput from '../../../components/common/UnderlinedInput'
 import PersonRegistrationPage from '../../people/pages/PersonRegistrationPage'
 import SensorRegistrationPage from '../../sensor/pages/SensorRegistrationPage'
 import HomeDashboard from '../components/HomeDashboard'
+import AiChatPage from '../components/AiChatPage'
 import HistoryPage from '../components/HistoryPage'
 import '../styles/main.css'
 
@@ -582,6 +585,50 @@ function SensorPage({ onAddSensor, onDeleteSensor, onEditSensor, onToggleConnect
   )
 }
 
+function AiChatAccess({ people, onError }) {
+  const [isOpen, setIsOpen] = useState(false)
+  const [openSequence, setOpenSequence] = useState(0)
+
+  useEffect(() => {
+    if (!isOpen) return undefined
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = previousOverflow }
+  }, [isOpen])
+
+  const openChat = () => {
+    setOpenSequence((sequence) => sequence + 1)
+    setIsOpen(true)
+  }
+
+  return createPortal(
+    <>
+      {!isOpen && (
+        <button
+          className="ai-chat-floating-button"
+          type="button"
+          aria-label="AI 상담 열기"
+          onClick={openChat}
+        >
+          <img src={qnaMascot} alt="" />
+          <span>AI 상담</span>
+        </button>
+      )}
+      {isOpen && (
+        <section className="ai-chat-overlay" role="dialog" aria-modal="true" aria-label="AI 상담">
+          <AiChatPage
+            key={openSequence}
+            people={people}
+            onClose={() => setIsOpen(false)}
+            onError={onError}
+          />
+        </section>
+      )}
+    </>,
+    document.body,
+  )
+}
+
 function MainPage({ onLogout, onUserUpdate, user }) {
   const [theme, setTheme] = useState(() => window.localStorage.getItem('app-theme') || 'inverted')
   const [activePage, setActivePage] = useState('home')
@@ -819,7 +866,7 @@ function MainPage({ onLogout, onUserUpdate, user }) {
 
   if (isRegisteringPerson) {
     return (
-      <PersonRegistrationPage
+      <><PersonRegistrationPage
         onBack={() => setIsRegisteringPerson(false)}
         onRegister={async (person) => {
           const created = await createPerson(person)
@@ -827,14 +874,14 @@ function MainPage({ onLogout, onUserUpdate, user }) {
           setActivePage('people')
           setIsRegisteringPerson(false)
         }}
-      />
+      /><AiChatAccess people={registeredPeople} onError={setApiError} /></>
     )
   }
 
 
   if (editingPerson) {
     return (
-      <PersonRegistrationPage
+      <><PersonRegistrationPage
         initialPerson={editingPerson}
         onBack={() => setEditingPerson(null)}
         onDelete={async () => {
@@ -852,13 +899,13 @@ function MainPage({ onLogout, onUserUpdate, user }) {
           )))
           setEditingPerson(null)
         }}
-      />
+      /><AiChatAccess people={registeredPeople} onError={setApiError} /></>
     )
   }
 
   if (isRegisteringSensor) {
     return (
-      <SensorRegistrationPage
+      <><SensorRegistrationPage
         people={registeredPeople}
         onBack={() => setIsRegisteringSensor(false)}
         onRegister={async (sensor) => {
@@ -867,13 +914,13 @@ function MainPage({ onLogout, onUserUpdate, user }) {
           setActivePage('sensor')
           setIsRegisteringSensor(false)
         }}
-      />
+      /><AiChatAccess people={registeredPeople} onError={setApiError} /></>
     )
   }
 
   if (editingSensor) {
     return (
-      <SensorRegistrationPage
+      <><SensorRegistrationPage
         initialSensor={editingSensor}
         people={registeredPeople}
         onBack={() => setEditingSensor(null)}
@@ -884,7 +931,7 @@ function MainPage({ onLogout, onUserUpdate, user }) {
           )))
           setEditingSensor(null)
         }}
-      />
+      /><AiChatAccess people={registeredPeople} onError={setApiError} /></>
     )
   }
 
@@ -918,6 +965,7 @@ function MainPage({ onLogout, onUserUpdate, user }) {
             )
           })}
         </nav>
+        <AiChatAccess people={registeredPeople} onError={setApiError} />
         {sensorToDelete && (
           <ConfirmDialog
             title="센서를 삭제할까요?"
