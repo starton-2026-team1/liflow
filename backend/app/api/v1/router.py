@@ -9,6 +9,7 @@ from app.api.v1.people import router as people_router
 from app.api.v1.realtime_events import router as realtime_events_router
 from app.api.v1.sensor_events import router as sensor_events_router
 from app.api.v1.sensors import router as sensors_router
+from app.api.v1.welfare_benefits import router as welfare_benefits_router
 
 api_router = APIRouter()
 api_router.include_router(auth_router, prefix="/auth", tags=["Auth"])
@@ -48,4 +49,9 @@ api_router.include_router(
     prefix="/sensor-events",
     tags=["Sensor Events"],
     dependencies=authentication,
+)
+api_router.include_router(
+    welfare_benefits_router,
+    prefix="/welfare-benefits",
+    tags=["Welfare Benefits"],
 )
