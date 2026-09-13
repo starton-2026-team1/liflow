@@ -1344,7 +1344,12 @@
 .chatbot-panel__header strong,
 .chatbot-panel__header span { display: block; }
 .chatbot-panel__header strong { font-size: 15px; }
-.chatbot-panel__header div > span { margin-top: 2px; color: rgb(255 255 255 / 75%); font-size: 11px; }
+.chatbot-panel__header div > span {
+  margin-top: 3px;
+  color: rgb(255 255 255 / 78%);
+  font-size: 9px;
+  line-height: 1.45;
+}
 
 .chatbot-panel__header button {
   display: grid;
@@ -1430,7 +1435,7 @@
   grid-template-columns: minmax(0, 1fr) 40px;
   align-items: center;
   gap: 8px;
-  padding: 11px 12px;
+  padding: 11px 12px 9px;
   border-top: 1px solid var(--color-divider);
   background: var(--color-surface);
 }

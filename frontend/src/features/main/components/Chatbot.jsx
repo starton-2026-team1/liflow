@@ -53,7 +53,10 @@ function Chatbot() {
             </span>
             <div>
               <strong>살핌이</strong>
-              <span>무엇이든 물어보세요</span>
+              <span>
+                AI 답변은 의료진의 진단·처방을 대신하지 않습니다.<br />
+                응급 상황에는 즉시 119에 연락해주세요.
+              </span>
             </div>
             <button type="button" onClick={() => setIsOpen(false)} aria-label="챗봇 닫기">
               <X aria-hidden="true" />
