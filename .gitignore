@@ -1,5 +1,20 @@
-backend/venv/
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# macOS metadata
+.DS_Store
+**/.DS_Store
+
+# Local environment files
 .env
-backend/.env
+**/.env
+!.env.example
+!**/.env.example
+
+# Python cache
 __pycache__/
-*.pyc
+*.py[cod]
+.pytest_cache/

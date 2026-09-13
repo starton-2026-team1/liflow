@@ -1,6 +1,4 @@
 myenv/
 data/
-model/
-img/
 __pycache__/
 *.DS_Store

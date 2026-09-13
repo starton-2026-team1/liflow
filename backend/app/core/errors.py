@@ -69,7 +69,9 @@ ERROR_MESSAGES: dict[ErrorCode, str] = {
     ErrorCode.VALIDATION_ERROR: "입력값을 확인해 주세요.",
     ErrorCode.RATE_LIMITED: "요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.",
     ErrorCode.INTERNAL_SERVER_ERROR: "서버 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.",
-    ErrorCode.DATABASE_UNAVAILABLE: "데이터베이스에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.",
+    ErrorCode.DATABASE_UNAVAILABLE: (
+        "데이터베이스에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요."
+    ),
     ErrorCode.DEVICE_API_KEY_NOT_CONFIGURED: "서버에 장치 인증 키가 설정되지 않았습니다.",
 }
 

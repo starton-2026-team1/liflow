@@ -15,6 +15,9 @@ class SensorEventResponse(SensorEventCreate):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    ai_label: str | None = None
+    ai_score: float | None = None
+    ai_is_anomaly: bool | None = None
     received_at: datetime
 
 
@@ -35,4 +38,7 @@ class DeviceEventResponse(BaseModel):
     detected_at: datetime
     detected_value: str
     sensor_status: str
+    ai_label: str | None = None
+    ai_score: float | None = None
+    ai_is_anomaly: bool | None = None
     received_at: datetime

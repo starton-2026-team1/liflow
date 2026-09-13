@@ -1,13 +1,13 @@
 from datetime import datetime
 
-from sqlalchemy import BigInteger, Boolean, DateTime, Float, ForeignKey, String, func
+from sqlalchemy import BigInteger, DateTime, ForeignKey, String, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base
 
 
-class SensorEvent(Base):
-    __tablename__ = "sensor_events"
+class PersonStatusEvent(Base):
+    __tablename__ = "person_status_events"
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     external_event_id: Mapped[str | None] = mapped_column(
@@ -19,12 +19,9 @@ class SensorEvent(Base):
     sensor_id: Mapped[int | None] = mapped_column(
         BigInteger, ForeignKey("sensors.id", ondelete="SET NULL"), nullable=True, index=True
     )
-    detected_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True)
-    detected_value: Mapped[str] = mapped_column(String(255), nullable=False)
-    sensor_status: Mapped[str] = mapped_column(String(30), nullable=False)
-    ai_label: Mapped[str | None] = mapped_column(String(20), nullable=True)
-    ai_score: Mapped[float | None] = mapped_column(Float, nullable=True)
-    ai_is_anomaly: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    status: Mapped[str] = mapped_column(String(20), nullable=False)
+    judged_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True)
+    detected_value: Mapped[str | None] = mapped_column(String(255), nullable=True)
     received_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.current_timestamp(), nullable=False
     )

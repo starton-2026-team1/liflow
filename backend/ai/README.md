@@ -45,6 +45,8 @@ step5_pipeline.py        → 전체 파이프라인
 pip install tensorflow pandas numpy scikit-learn matplotlib
 ```
 
+model 폴더에 드라이브에 있는 autoencoder.keras, lstm.keras, mse_max.npy, threshold.npy 를 다운로드 한 후 폴더에 넣고 실행
+
 ## 진행도
 
 2026-09-11 : 냉장고, 방 문 데이터 총합 16만개 수집
