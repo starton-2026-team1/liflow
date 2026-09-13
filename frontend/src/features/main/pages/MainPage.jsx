@@ -16,6 +16,7 @@ import {
   X,
 } from 'lucide-react'
 import { createPerson, deletePerson, getPeople, updatePerson, updatePersonMonitoringStatus } from '../../../api/people'
+import { confirmAlertSafety, getAlerts } from '../../../api/alerts'
 import { connectSensorEventStream } from '../../../api/realtimeEvents'
 import { getSensorEvents } from '../../../api/sensorEvents'
 import { connectSensor, createSensor, deleteSensor, disconnectSensor, getSensors, updateSensor } from '../../../api/sensors'
@@ -56,6 +57,14 @@ const mergeSensorEvents = (...eventGroups) => {
   eventGroups.flat().forEach((event) => eventsById.set(event.id, event))
   return [...eventsById.values()].sort(
     (left, right) => new Date(right.detectedAt) - new Date(left.detectedAt),
+  )
+}
+
+const mergeAlerts = (...alertGroups) => {
+  const alertsById = new Map()
+  alertGroups.flat().forEach((alert) => alertsById.set(alert.id, alert))
+  return [...alertsById.values()].sort(
+    (left, right) => new Date(right.occurredAt) - new Date(left.occurredAt),
   )
 }
 
@@ -596,6 +605,8 @@ function MainPage({ onLogout, onUserUpdate, user }) {
   const [registeredPeople, setRegisteredPeople] = useState([])
   const [registeredSensors, setRegisteredSensors] = useState([])
   const [sensorEvents, setSensorEvents] = useState([])
+  const [alerts, setAlerts] = useState([])
+  const [confirmingAlertId, setConfirmingAlertId] = useState(null)
   const [sensorToDelete, setSensorToDelete] = useState(null)
   const [isDeletingSensor, setIsDeletingSensor] = useState(false)
   const [updatingConnectionSensorId, setUpdatingConnectionSensorId] = useState(null)
@@ -613,12 +624,13 @@ function MainPage({ onLogout, onUserUpdate, user }) {
   useEffect(() => {
     let isActive = true
 
-    Promise.all([getPeople(), getSensors(), getSensorEvents()])
-      .then(([people, sensors, events]) => {
+    Promise.all([getPeople(), getSensors(), getSensorEvents(), getAlerts()])
+      .then(([people, sensors, events, loadedAlerts]) => {
         if (!isActive) return
         setRegisteredPeople(people)
         setRegisteredSensors(sensors)
         setSensorEvents((currentEvents) => mergeSensorEvents(events, currentEvents))
+        setAlerts((currentAlerts) => mergeAlerts(loadedAlerts, currentAlerts))
       })
       .catch((error) => {
         if (isActive) setApiError(error.message || '데이터를 불러오지 못했어요.')
@@ -631,13 +643,36 @@ function MainPage({ onLogout, onUserUpdate, user }) {
   }, [])
 
   useEffect(() => connectSensorEventStream({
+    onAlert: (alert) => {
+      setAlerts((alerts) => mergeAlerts(alert, alerts))
+    },
     onEvent: (event) => {
       setSensorEvents((events) => mergeSensorEvents(event, events))
+      getAlerts()
+        .then(setAlerts)
+        .catch((error) => {
+          setApiError(error.message || '알림 상태를 갱신하지 못했어요.')
+        })
     },
     onFatalError: (error) => {
       setApiError(error.message || '실시간 연결을 시작하지 못했어요.')
     },
   }), [])
+
+  const confirmSafety = async (alert) => {
+    if (!alert || alert.id === 'preview') return
+    setConfirmingAlertId(alert.id)
+    try {
+      const confirmedAlert = await confirmAlertSafety(alert.id)
+      setAlerts((alerts) => alerts.map((item) => (
+        item.id === confirmedAlert.id ? confirmedAlert : item
+      )))
+    } catch (error) {
+      setApiError(error.message || '안전 확인을 처리하지 못했어요.')
+    } finally {
+      setConfirmingAlertId(null)
+    }
+  }
 
   useEffect(() => {
     document.documentElement.dataset.appTheme = theme
@@ -724,9 +759,12 @@ function MainPage({ onLogout, onUserUpdate, user }) {
       if (isRecordingStarted) {
         return (
           <HomeDashboard
+            alerts={alerts}
             person={primaryPerson}
             sensors={registeredSensors}
             events={sensorEvents}
+            isConfirmingSafety={Boolean(confirmingAlertId)}
+            onConfirmSafety={confirmSafety}
             onOpenPerson={() => setActivePage('people')}
             onOpenWelfare={() => setActivePage('welfare')}
           />

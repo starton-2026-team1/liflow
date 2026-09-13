@@ -1,4 +1,5 @@
 import { API_BASE_URL, getAccessToken } from './client'
+import { toAlert } from './alerts'
 import { toSensorEvent } from './sensorEvents'
 
 const MAX_RECONNECT_DELAY_MS = 30_000
@@ -13,7 +14,7 @@ const createWebSocketUrl = () => {
   return url.toString()
 }
 
-export function connectSensorEventStream({ onEvent, onFatalError }) {
+export function connectSensorEventStream({ onAlert, onEvent, onFatalError }) {
   let socket = null
   let heartbeatTimer = null
   let reconnectTimer = null
@@ -72,6 +73,10 @@ export function connectSensorEventStream({ onEvent, onFatalError }) {
 
       if (message.type === 'sensor_event.created' && message.data) {
         onEvent(toSensorEvent(message.data))
+      }
+
+      if (message.type === 'alert.created' && message.data) {
+        onAlert?.(toAlert(message.data))
       }
     })
 
