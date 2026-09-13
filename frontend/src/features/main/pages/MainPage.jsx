@@ -32,6 +32,7 @@ import PersonRegistrationPage from '../../people/pages/PersonRegistrationPage'
 import SensorRegistrationPage from '../../sensor/pages/SensorRegistrationPage'
 import HomeDashboard from '../components/HomeDashboard'
 import HistoryPage from '../components/HistoryPage'
+import Chatbot from '../components/Chatbot'
 import '../styles/main.css'
 
 const navigationItems = [
@@ -918,6 +919,7 @@ function MainPage({ onLogout, onUserUpdate, user }) {
             )
           })}
         </nav>
+        <Chatbot />
         {sensorToDelete && (
           <ConfirmDialog
             title="센서를 삭제할까요?"
