@@ -43,6 +43,13 @@ async def get_owned_person(
     )
 
 
+async def list_owned_people(session: AsyncSession, user_id: int) -> list[Person]:
+    result = await session.scalars(
+        select(Person).where(Person.user_id == user_id).order_by(Person.id)
+    )
+    return list(result.all())
+
+
 async def get_person_owner_id(
     session: AsyncSession, person_id: int
 ) -> int | None:

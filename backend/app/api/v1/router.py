@@ -9,6 +9,7 @@ from app.api.v1.people import router as people_router
 from app.api.v1.realtime_events import router as realtime_events_router
 from app.api.v1.sensor_events import router as sensor_events_router
 from app.api.v1.sensors import router as sensors_router
+from app.api.v1.status_events import router as status_events_router
 from app.api.v1.welfare_benefits import router as welfare_benefits_router
 
 api_router = APIRouter()
@@ -18,6 +19,9 @@ api_router.include_router(
 )
 api_router.include_router(
     realtime_events_router, prefix="/ws", tags=["Realtime Events"]
+)
+api_router.include_router(
+    status_events_router, prefix="/status-events", tags=["Status Events"]
 )
 authentication = [Depends(get_current_user)]
 api_router.include_router(
