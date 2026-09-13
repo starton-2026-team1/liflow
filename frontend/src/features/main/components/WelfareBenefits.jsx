@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { ChevronRight, ExternalLink, MapPin } from 'lucide-react'
+import { ChevronRight, ExternalLink } from 'lucide-react'
 import BackButton from '../../../components/common/BackButton'
 import { getWelfareBenefits, parseRegion } from '../../../api/welfareBenefits'
 import { koreanRegions } from '../data/koreanRegions'
@@ -81,10 +81,7 @@ export function WelfareBenefitsPage({ onBack, person }) {
         </div>
       </header>
 
-      <section className="welfare-region" aria-labelledby="welfare-region-title">
-        <div>
-          <strong id="welfare-region-title"><MapPin aria-hidden="true" />지역 선택</strong>
-        </div>
+      <section className="welfare-region" aria-label="지역 선택">
         <div className="welfare-region__selects">
           <label>
             <span>시·도</span>
