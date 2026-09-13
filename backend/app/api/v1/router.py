@@ -6,6 +6,7 @@ from app.api.v1.alerts import router as alerts_router
 from app.api.v1.auth import router as auth_router
 from app.api.v1.device_events import router as device_events_router
 from app.api.v1.people import router as people_router
+from app.api.v1.push_subscriptions import router as push_subscriptions_router
 from app.api.v1.realtime_events import router as realtime_events_router
 from app.api.v1.sensor_events import router as sensor_events_router
 from app.api.v1.sensors import router as sensors_router
@@ -29,6 +30,12 @@ api_router.include_router(
     alerts_router,
     prefix="/alerts",
     tags=["Alerts"],
+    dependencies=authentication,
+)
+api_router.include_router(
+    push_subscriptions_router,
+    prefix="/push-subscriptions",
+    tags=["Push Notifications"],
     dependencies=authentication,
 )
 api_router.include_router(

@@ -13,7 +13,7 @@ const createWebSocketUrl = () => {
   return url.toString()
 }
 
-export function connectSensorEventStream({ onEvent, onFatalError }) {
+export function connectSensorEventStream({ onAlert, onEvent, onFatalError }) {
   let socket = null
   let heartbeatTimer = null
   let reconnectTimer = null
@@ -72,6 +72,10 @@ export function connectSensorEventStream({ onEvent, onFatalError }) {
 
       if (message.type === 'sensor_event.created' && message.data) {
         onEvent(toSensorEvent(message.data))
+      }
+
+      if (message.type === 'alert.created' && message.data) {
+        onAlert?.(message.data)
       }
     })
 
