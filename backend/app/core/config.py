@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     jwt_secret_key: str
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 60
-    device_api_key: str = ""
+    device_api_key: str = "fridge-sensor-01"
     public_data_service_key: str = ""
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
     alert_check_interval_seconds: int = 60
