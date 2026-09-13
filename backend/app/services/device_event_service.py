@@ -10,6 +10,7 @@ from app.repositories.sensor_event_repository import (
 )
 from app.repositories.sensor_repository import get_sensor_by_device_id
 from app.schemas.sensor_event import DeviceEventCreate
+from app.services.ai_service import predict_anomaly
 from app.services.alert_service import utc_now
 
 
@@ -32,6 +33,12 @@ async def record_device_event(
     if sensor.status.upper() != "CONNECTED":
         raise AppError(ErrorCode.SENSOR_NOT_CONNECTED)
 
+    ai_result: dict | None = None
+    try:
+        ai_result = predict_anomaly(float(data.detected_value))
+    except (ValueError, TypeError):
+        pass
+
     try:
         async with session.begin_nested():
             event = await create_device_sensor_event(
@@ -40,6 +47,9 @@ async def record_device_event(
                 person_id=sensor.person_id,
                 sensor_id=sensor.id,
                 sensor_status=sensor.status,
+                ai_label=ai_result["label"] if ai_result else None,
+                ai_score=ai_result["score"] if ai_result else None,
+                ai_is_anomaly=ai_result["is_anomaly"] if ai_result else None,
             )
             await resolve_active_alerts(
                 session,

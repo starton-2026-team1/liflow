@@ -21,6 +21,7 @@ async def create_device_event(
     session: AsyncSession = Depends(get_db_session),
 ) -> DeviceEventResponse:
     event, created = await record_device_event(session, data)
+    
     if not created:
         response.status_code = status.HTTP_200_OK
         return event

@@ -22,6 +22,9 @@ async def create_device_sensor_event(
     person_id: int,
     sensor_id: int,
     sensor_status: str,
+    ai_label: str | None = None,
+    ai_score: float | None = None,
+    ai_is_anomaly: bool | None = None,
 ) -> SensorEvent:
     event = SensorEvent(
         external_event_id=data.event_id,
@@ -30,6 +33,9 @@ async def create_device_sensor_event(
         detected_at=data.detected_at,
         detected_value=data.detected_value,
         sensor_status=sensor_status,
+        ai_label=ai_label,
+        ai_score=ai_score,
+        ai_is_anomaly=ai_is_anomaly,
     )
     session.add(event)
     await session.flush()
