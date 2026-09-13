@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Send, X } from 'lucide-react'
+import { askAiChat } from '../../../api/aiChat'
 import chatbotMascot from '../../../assets/mascot/qna.png'
 
 const suggestedQuestions = [
@@ -12,6 +13,8 @@ const suggestedQuestions = [
 function Chatbot() {
   const [isOpen, setIsOpen] = useState(false)
   const [message, setMessage] = useState('')
+  const [conversationId, setConversationId] = useState(null)
+  const [isSending, setIsSending] = useState(false)
   const [messages, setMessages] = useState([
     {
       id: 1,
@@ -20,20 +23,42 @@ function Chatbot() {
     },
   ])
 
-  const sendMessage = (text) => {
+  const sendMessage = async (text) => {
     const trimmedMessage = text.trim()
-    if (!trimmedMessage) return
+    if (!trimmedMessage || isSending) return
 
     setMessages((current) => [
       ...current,
       { id: Date.now(), sender: 'user', text: trimmedMessage },
-      {
-        id: Date.now() + 1,
-        sender: 'bot',
-        text: '현재는 상담 기능을 준비하고 있어요. 곧 더 정확한 답변을 드릴게요.',
-      },
     ])
     setMessage('')
+    if (/(기록|활동|센서|알림|감지|일주일|지난주|최근\s*상태)/.test(trimmedMessage)) {
+      setMessages((current) => [...current, {
+        id: Date.now() + 1,
+        sender: 'bot',
+        text: '대상자 기록 분석은 개인정보 보호를 위한 로컬 모델이 준비된 후 제공할게요.',
+      }])
+      return
+    }
+
+    setIsSending(true)
+    try {
+      const result = await askAiChat({ conversationId, question: trimmedMessage })
+      setConversationId(result.conversation_id)
+      setMessages((current) => [...current, {
+        id: Date.now() + 1,
+        sender: 'bot',
+        text: result.answer,
+      }])
+    } catch (error) {
+      setMessages((current) => [...current, {
+        id: Date.now() + 1,
+        sender: 'bot',
+        text: error.message || '답변을 불러오지 못했어요. 잠시 후 다시 질문해 주세요.',
+      }])
+    } finally {
+      setIsSending(false)
+    }
   }
 
   const handleSubmit = (event) => {
@@ -78,6 +103,7 @@ function Chatbot() {
                 ))}
               </div>
             )}
+            {isSending && <p className="chatbot-message chatbot-message--bot">답변을 준비하고 있어요...</p>}
           </div>
 
           <form className="chatbot-panel__composer" onSubmit={handleSubmit}>
@@ -89,7 +115,7 @@ function Chatbot() {
               placeholder="메시지를 입력해 주세요"
               autoComplete="off"
             />
-            <button type="submit" disabled={!message.trim()} aria-label="메시지 보내기">
+            <button type="submit" disabled={!message.trim() || isSending} aria-label="메시지 보내기">
               <Send aria-hidden="true" />
             </button>
           </form>

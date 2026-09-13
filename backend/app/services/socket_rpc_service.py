@@ -10,6 +10,7 @@ from app.models.user import User
 from app.repositories.person_repository import get_person_owner_id, list_people
 from app.repositories.sensor_event_repository import list_sensor_events
 from app.repositories.sensor_repository import list_sensors
+from app.schemas.ai_chat import ChatAnswer, ChatRequest
 from app.schemas.auth import LoginRequest, SignUpRequest, UserResponse, UserUpdate
 from app.schemas.person import PersonCreate, PersonResponse, PersonUpdate
 from app.schemas.sensor import SensorCreate, SensorResponse, SensorUpdate
@@ -20,6 +21,7 @@ from app.schemas.sensor_event import (
     SensorEventResponse,
 )
 from app.schemas.websocket import EventQuery, SocketRequest
+from app.services.ai_chat_service import ask_ai
 from app.services.auth_service import log_in, sign_up, update_account
 from app.services.device_event_service import record_device_event
 from app.services.person_service import (
@@ -93,6 +95,10 @@ async def dispatch_socket_request(
         return changed(
             UserResponse.model_validate(updated).model_dump(mode="json"), user.id, "user"
         )
+
+    if (method, path) == ("POST", "/ai-chat/messages") and not url.query:
+        answer = await ask_ai(session, user.id, ChatRequest.model_validate(request.body))
+        return SocketResult(ChatAnswer.model_validate(answer).model_dump(mode="json"))
 
     if (method, path) == ("GET", "/snapshot"):
         people = await list_people(session, user.id)

@@ -12,6 +12,9 @@ class Settings(BaseSettings):
     alert_check_interval_seconds: int = 60
     alert_check_start_hour: int = 0
     alert_check_end_hour: int = 24
+    anthropic_api_key: str = ""
+    anthropic_base_url: str = "https://api.anthropic.com"
+    anthropic_model: str = "claude-sonnet-4-6"
 
     @property
     def allowed_cors_origins(self) -> list[str]:

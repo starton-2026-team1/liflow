@@ -48,6 +48,18 @@ React + Vite Dashboard   AI Analysis Pipeline (개발 중)
   `ALERT_CHECK_END_HOUR`로 점검 주기와 시간대를 설정합니다.
 - DB 반영 전 `cd backend && alembic upgrade head`를 실행합니다.
 
+## AI 보호자 상담 설정
+
+- 일반 의학 질문용으로 서버 환경 변수 `ANTHROPIC_API_KEY`에 Claude API 키를 설정합니다.
+- `ANTHROPIC_MODEL`로 사용할 모델을 변경할 수 있으며 기본값은 `claude-sonnet-4-6`입니다.
+- 개인정보 보호를 위해 대상자 기록은 Claude로 전송하지 않습니다. 대상자 기록 분석은 로컬 모델
+  연동 전까지 비활성화되며, `person_id`가 없는 일반 질문만 Claude로 처리합니다.
+- 프론트 상담 메시지는 `/api/v1/ws/rpc` WebSocket에 로그인 토큰으로 인증한 뒤
+  `/ai-chat/messages` 요청으로 전송합니다.
+- `conversation_id`를 다시 보내면 이전 대화를 이어가지만, 대상자와 연결된 메시지는 일반 질문의
+  Claude 문맥에서 제외됩니다.
+- 의료·민간요법 답변은 참고 정보이며 진단이나 처방을 대체하지 않습니다.
+
 ## 기술 스택
 
 | 구분 | 기술 |
