@@ -33,6 +33,7 @@ import SensorRegistrationPage from '../../sensor/pages/SensorRegistrationPage'
 import HomeDashboard from '../components/HomeDashboard'
 import HistoryPage from '../components/HistoryPage'
 import Chatbot from '../components/Chatbot'
+import { WelfareBenefitsPage } from '../components/WelfareBenefits'
 import '../styles/main.css'
 
 const navigationItems = [
@@ -602,6 +603,7 @@ function MainPage({ onLogout, onUserUpdate, user }) {
   const [isLoading, setIsLoading] = useState(true)
   const [apiError, setApiError] = useState('')
   const activeItem = navigationItems.find(({ id }) => id === activePage)
+  const pageLabel = activePage === 'welfare' ? '우리 동네 복지 혜택' : activeItem?.label
   const primaryPerson = registeredPeople[0]
   const hasLinkedSensor = Boolean(primaryPerson) && registeredSensors.some(
     ({ personId }) => personId === primaryPerson.id,
@@ -709,6 +711,15 @@ function MainPage({ onLogout, onUserUpdate, user }) {
       return <EmptyState title="정보를 불러오고 있어요" description="잠시만 기다려 주세요." />
     }
 
+    if (activePage === 'welfare') {
+      return (
+        <WelfareBenefitsPage
+          person={primaryPerson}
+          onBack={() => setActivePage('home')}
+        />
+      )
+    }
+
     if (activePage === 'home') {
       if (isRecordingStarted) {
         return (
@@ -717,6 +728,7 @@ function MainPage({ onLogout, onUserUpdate, user }) {
             sensors={registeredSensors}
             events={sensorEvents}
             onOpenPerson={() => setActivePage('people')}
+            onOpenWelfare={() => setActivePage('welfare')}
           />
         )
       }
@@ -891,14 +903,14 @@ function MainPage({ onLogout, onUserUpdate, user }) {
 
   return (
     <main className="main-page">
-      <section className="main-panel" aria-label={activeItem?.label}>
-        <div className="main-content" role="region" aria-label={`${activeItem?.label} 페이지`}>
+      <section className="main-panel" aria-label={pageLabel}>
+        <div className="main-content" role="region" aria-label={`${pageLabel} 페이지`}>
           {renderPage()}
         </div>
 
         <nav className="bottom-navigation" aria-label="주요 메뉴">
           {navigationItems.map(({ id, label, icon: Icon }) => {
-            const isActive = id === activePage
+            const isActive = id === activePage || (id === 'home' && activePage === 'welfare')
             const className = 'bottom-navigation__item'
               + (isActive ? ' bottom-navigation__item--active' : '')
 
