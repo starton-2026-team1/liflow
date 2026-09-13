@@ -1,14 +1,17 @@
-from fastapi import HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.errors import AppError, ErrorCode
 from app.models.sensor_event import SensorEvent
+from app.repositories.alert_repository import resolve_active_alerts
 from app.repositories.sensor_event_repository import (
     create_device_sensor_event,
     get_sensor_event_by_external_id,
 )
 from app.repositories.sensor_repository import get_sensor_by_device_id
 from app.schemas.sensor_event import DeviceEventCreate
+from app.services.ai_service import predict_anomaly
+from app.services.alert_service import utc_now
 
 
 async def record_device_event(
@@ -16,9 +19,7 @@ async def record_device_event(
 ) -> tuple[SensorEvent, bool]:
     sensor = await get_sensor_by_device_id(session, data.device_id)
     if sensor is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Sensor not found"
-        )
+        raise AppError(ErrorCode.SENSOR_NOT_FOUND)
 
     existing = await get_sensor_event_by_external_id(session, data.event_id)
     if existing is not None:
@@ -26,17 +27,17 @@ async def record_device_event(
             existing.sensor_id != sensor.id
             or existing.detected_value != data.detected_value
         ):
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="event_id is already used for different data",
-            )
+            raise AppError(ErrorCode.EVENT_ID_CONFLICT)
         return existing, False
 
     if sensor.status.upper() != "CONNECTED":
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Sensor is not connected",
-        )
+        raise AppError(ErrorCode.SENSOR_NOT_CONNECTED)
+
+    ai_result: dict | None = None
+    try:
+        ai_result = predict_anomaly(float(data.detected_value))
+    except (ValueError, TypeError):
+        pass
 
     try:
         async with session.begin_nested():
@@ -46,6 +47,15 @@ async def record_device_event(
                 person_id=sensor.person_id,
                 sensor_id=sensor.id,
                 sensor_status=sensor.status,
+                ai_label=ai_result["label"] if ai_result else None,
+                ai_score=ai_result["score"] if ai_result else None,
+                ai_is_anomaly=ai_result["is_anomaly"] if ai_result else None,
+            )
+            await resolve_active_alerts(
+                session,
+                person_id=sensor.person_id,
+                cause="INACTIVITY",
+                resolved_at=utc_now(),
             )
         return event, True
     except IntegrityError as exc:
@@ -56,8 +66,5 @@ async def record_device_event(
             existing.sensor_id != sensor.id
             or existing.detected_value != data.detected_value
         ):
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="event_id is already used for different data",
-            ) from exc
+            raise AppError(ErrorCode.EVENT_ID_CONFLICT) from exc
         return existing, False

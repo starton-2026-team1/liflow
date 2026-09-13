@@ -1,7 +1,7 @@
-from fastapi import HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.errors import AppError, ErrorCode
 from app.core.security import create_access_token, hash_password, verify_password
 from app.models.user import User
 from app.repositories.user_repository import create_user, get_user_by_email, update_user
@@ -17,10 +17,7 @@ def build_auth_response(user: User) -> AuthResponse:
 
 async def sign_up(session: AsyncSession, data: SignUpRequest) -> AuthResponse:
     if await get_user_by_email(session, str(data.email)) is not None:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Email is already registered",
-        )
+        raise AppError(ErrorCode.AUTH_EMAIL_ALREADY_REGISTERED)
     try:
         user = await create_user(
             session,
@@ -28,19 +25,15 @@ async def sign_up(session: AsyncSession, data: SignUpRequest) -> AuthResponse:
             hash_password(data.password),
         )
     except IntegrityError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Email is already registered",
-        ) from exc
+        raise AppError(ErrorCode.AUTH_EMAIL_ALREADY_REGISTERED) from exc
     return build_auth_response(user)
 
 
 async def log_in(session: AsyncSession, data: LoginRequest) -> AuthResponse:
     user = await get_user_by_email(session, str(data.email))
     if user is None or not verify_password(data.password, user.password_hash):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid email or password",
+        raise AppError(
+            ErrorCode.AUTH_INVALID_CREDENTIALS,
             headers={"WWW-Authenticate": "Bearer"},
         )
     return build_auth_response(user)
@@ -50,19 +43,13 @@ async def update_account(
     session: AsyncSession, user: User, data: UserUpdate
 ) -> User:
     if not verify_password(data.current_password, user.password_hash):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Current password is incorrect",
-        )
+        raise AppError(ErrorCode.AUTH_CURRENT_PASSWORD_INCORRECT)
 
     new_email = str(data.email) if data.email is not None else None
     if new_email is not None:
         existing = await get_user_by_email(session, new_email)
         if existing is not None and existing.id != user.id:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="Email is already registered",
-            )
+            raise AppError(ErrorCode.AUTH_EMAIL_ALREADY_REGISTERED)
     try:
         return await update_user(
             session,
@@ -73,7 +60,4 @@ async def update_account(
             ),
         )
     except IntegrityError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Email is already registered",
-        ) from exc
+        raise AppError(ErrorCode.AUTH_EMAIL_ALREADY_REGISTERED) from exc

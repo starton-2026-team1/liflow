@@ -5,6 +5,7 @@ import alertMascot from '../../../assets/mascot/alert.png'
 import disconnectedMascot from '../../../assets/mascot/disconnected.png'
 import profileMascot from '../../../assets/mascot/normal.png'
 import { createHomeDashboard } from '../utils/homeDashboard'
+import { WelfareBenefitsCard } from './WelfareBenefits'
 import '../styles/homeDashboard.css'
 
 const sensorStatusLabels = {
@@ -141,7 +142,7 @@ function WarningStatus({ model }) {
   )
 }
 
-export default function HomeDashboard({ events, onOpenPerson, person, sensors }) {
+export default function HomeDashboard({ events, onOpenPerson, onOpenWelfare, person, sensors }) {
   const [now, setNow] = useState(() => new Date())
 
   useEffect(() => {
@@ -182,6 +183,7 @@ export default function HomeDashboard({ events, onOpenPerson, person, sensors })
         ? <WarningStatus model={model} />
         : <NormalStatus model={model} />}
       <ActivitySummary model={model} />
+      <WelfareBenefitsCard person={person} onClick={onOpenWelfare} />
     </div>
   )
 }

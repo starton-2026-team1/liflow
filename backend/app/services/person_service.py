@@ -1,6 +1,6 @@
-from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.errors import AppError, ErrorCode
 from app.models.person import Person
 from app.repositories.person_repository import (
     create_person,
@@ -23,9 +23,7 @@ async def find_person_or_404(
 ) -> Person:
     person = await get_person(session, person_id, user_id)
     if person is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Person not found"
-        )
+        raise AppError(ErrorCode.PERSON_NOT_FOUND)
     return person
 
 
@@ -34,9 +32,7 @@ async def find_owned_person_or_404(
 ) -> Person:
     person = await get_owned_person(session, person_id, user_id)
     if person is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Person not found"
-        )
+        raise AppError(ErrorCode.PERSON_NOT_FOUND)
     return person
 
 

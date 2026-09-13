@@ -16,6 +16,8 @@ import {
   X,
 } from 'lucide-react'
 import { createPerson, deletePerson, getPeople, updatePerson, updatePersonMonitoringStatus } from '../../../api/people'
+import { connectSensorEventStream } from '../../../api/realtimeEvents'
+import { enablePushNotifications } from '../../../api/pushNotifications'
 import { getSensorEvents } from '../../../api/sensorEvents'
 import { connectSensor, createSensor, deleteSensor, disconnectSensor, getSensors, updateSensor } from '../../../api/sensors'
 import mascot from '../../../assets/mascot.png'
@@ -31,6 +33,8 @@ import PersonRegistrationPage from '../../people/pages/PersonRegistrationPage'
 import SensorRegistrationPage from '../../sensor/pages/SensorRegistrationPage'
 import HomeDashboard from '../components/HomeDashboard'
 import HistoryPage from '../components/HistoryPage'
+import Chatbot from '../components/Chatbot'
+import { WelfareBenefitsPage } from '../components/WelfareBenefits'
 import '../styles/main.css'
 
 const navigationItems = [
@@ -47,6 +51,14 @@ const profileSections = [
   { title: '기기 및 안전', items: ['안심태그(NFC)'] },
   { title: '지원', items: ['도움말', '이용약관 및 개인정보 처리방침'] },
 ]
+
+const mergeSensorEvents = (...eventGroups) => {
+  const eventsById = new Map()
+  eventGroups.flat().forEach((event) => eventsById.set(event.id, event))
+  return [...eventsById.values()].sort(
+    (left, right) => new Date(right.detectedAt) - new Date(left.detectedAt),
+  )
+}
 
 function EmptyState({ actionLabel, description, onAction, title }) {
   return (
@@ -125,7 +137,7 @@ function HomePage({ hasSensor, onAddPerson, onConnectSensor, onStartRecording, p
   )
 }
 
-function ProfilePage({ onLogout, onThemeChange, onUserUpdate, theme, user }) {
+function ProfilePage({ notificationStatus, onEnableNotifications, onLogout, onThemeChange, onUserUpdate, theme, user }) {
   const [showThemeDialog, setShowThemeDialog] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
   const [editMode, setEditMode] = useState('menu')
@@ -318,10 +330,11 @@ function ProfilePage({ onLogout, onThemeChange, onUserUpdate, theme, user }) {
                   onClick={() => {
                     if (label === '테마 설정') setShowThemeDialog(true)
                     if (label === '내 정보 수정') setIsEditing(true)
+                    if (label === '알림 설정') onEnableNotifications()
                   }}
                 >
                   <span className="settings-list__label">
-                    {label}
+                    {label === '알림 설정' && notificationStatus === 'enabled' ? '알림 설정됨' : label}
                   </span>
                   <ChevronRight aria-hidden="true" />
                 </button>
@@ -591,7 +604,11 @@ function MainPage({ onLogout, onUserUpdate, user }) {
   const [personToStopMonitoring, setPersonToStopMonitoring] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
   const [apiError, setApiError] = useState('')
+  const [notificationStatus, setNotificationStatus] = useState(
+    () => ('Notification' in window && Notification.permission === 'granted' ? 'enabled' : 'idle'),
+  )
   const activeItem = navigationItems.find(({ id }) => id === activePage)
+  const pageLabel = activePage === 'welfare' ? '우리 동네 복지 혜택' : activeItem?.label
   const primaryPerson = registeredPeople[0]
   const hasLinkedSensor = Boolean(primaryPerson) && registeredSensors.some(
     ({ personId }) => personId === primaryPerson.id,
@@ -606,7 +623,7 @@ function MainPage({ onLogout, onUserUpdate, user }) {
         if (!isActive) return
         setRegisteredPeople(people)
         setRegisteredSensors(sensors)
-        setSensorEvents(events)
+        setSensorEvents((currentEvents) => mergeSensorEvents(events, currentEvents))
       })
       .catch((error) => {
         if (isActive) setApiError(error.message || '데이터를 불러오지 못했어요.')
@@ -617,6 +634,29 @@ function MainPage({ onLogout, onUserUpdate, user }) {
 
     return () => { isActive = false }
   }, [])
+
+  useEffect(() => connectSensorEventStream({
+    onAlert: (alert) => {
+      setApiError(`${alert.title}: ${alert.description}`)
+    },
+    onEvent: (event) => {
+      setSensorEvents((events) => mergeSensorEvents(event, events))
+    },
+    onFatalError: (error) => {
+      setApiError(error.message || '실시간 연결을 시작하지 못했어요.')
+    },
+  }), [])
+
+  const enableNotifications = async () => {
+    try {
+      await enablePushNotifications()
+      setNotificationStatus('enabled')
+      setApiError('푸시 알림을 켰어요.')
+    } catch (error) {
+      setNotificationStatus('error')
+      setApiError(error.message || '푸시 알림을 설정하지 못했어요.')
+    }
+  }
 
   useEffect(() => {
     document.documentElement.dataset.appTheme = theme
@@ -690,6 +730,15 @@ function MainPage({ onLogout, onUserUpdate, user }) {
       return <EmptyState title="정보를 불러오고 있어요" description="잠시만 기다려 주세요." />
     }
 
+    if (activePage === 'welfare') {
+      return (
+        <WelfareBenefitsPage
+          person={primaryPerson}
+          onBack={() => setActivePage('home')}
+        />
+      )
+    }
+
     if (activePage === 'home') {
       if (isRecordingStarted) {
         return (
@@ -698,6 +747,7 @@ function MainPage({ onLogout, onUserUpdate, user }) {
             sensors={registeredSensors}
             events={sensorEvents}
             onOpenPerson={() => setActivePage('people')}
+            onOpenWelfare={() => setActivePage('welfare')}
           />
         )
       }
@@ -790,8 +840,10 @@ function MainPage({ onLogout, onUserUpdate, user }) {
 
     return (
       <ProfilePage
+        notificationStatus={notificationStatus}
         theme={theme}
         user={user}
+        onEnableNotifications={enableNotifications}
         onLogout={onLogout}
         onThemeChange={setTheme}
         onUserUpdate={onUserUpdate}
@@ -872,14 +924,14 @@ function MainPage({ onLogout, onUserUpdate, user }) {
 
   return (
     <main className="main-page">
-      <section className="main-panel" aria-label={activeItem?.label}>
-        <div className="main-content" role="region" aria-label={`${activeItem?.label} 페이지`}>
+      <section className="main-panel" aria-label={pageLabel}>
+        <div className="main-content" role="region" aria-label={`${pageLabel} 페이지`}>
           {renderPage()}
         </div>
 
         <nav className="bottom-navigation" aria-label="주요 메뉴">
           {navigationItems.map(({ id, label, icon: Icon }) => {
-            const isActive = id === activePage
+            const isActive = id === activePage || (id === 'home' && activePage === 'welfare')
             const className = 'bottom-navigation__item'
               + (isActive ? ' bottom-navigation__item--active' : '')
 
@@ -900,6 +952,7 @@ function MainPage({ onLogout, onUserUpdate, user }) {
             )
           })}
         </nav>
+        <Chatbot />
         {sensorToDelete && (
           <ConfirmDialog
             title="센서를 삭제할까요?"

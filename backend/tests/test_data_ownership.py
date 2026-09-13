@@ -158,4 +158,6 @@ async def test_sensor_event_requires_matching_person(client: AsyncClient) -> Non
         },
     )
     assert response.status_code == 400
-    assert response.json()["detail"] == "Sensor is not assigned to the person"
+    body = response.json()
+    assert body["code"] == "SENSOR_PERSON_MISMATCH"
+    assert body["detail"] == "선택한 센서는 해당 대상자에게 연결되어 있지 않습니다."

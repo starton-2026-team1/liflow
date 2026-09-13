@@ -1,6 +1,6 @@
 import { apiRequest } from './client'
 
-const toSensorEvent = (event) => ({
+export const toSensorEvent = (event) => ({
   id: event.id,
   personId: event.person_id,
   sensorId: event.sensor_id,
