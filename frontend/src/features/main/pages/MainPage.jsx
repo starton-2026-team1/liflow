@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import { createPerson, deletePerson, getPeople, updatePerson, updatePersonMonitoringStatus } from '../../../api/people'
 import { connectSensorEventStream } from '../../../api/realtimeEvents'
+import { enablePushNotifications } from '../../../api/pushNotifications'
 import { getSensorEvents } from '../../../api/sensorEvents'
 import { connectSensor, createSensor, deleteSensor, disconnectSensor, getSensors, updateSensor } from '../../../api/sensors'
 import mascot from '../../../assets/mascot.png'
@@ -32,6 +33,7 @@ import PersonRegistrationPage from '../../people/pages/PersonRegistrationPage'
 import SensorRegistrationPage from '../../sensor/pages/SensorRegistrationPage'
 import HomeDashboard from '../components/HomeDashboard'
 import HistoryPage from '../components/HistoryPage'
+import Chatbot from '../components/Chatbot'
 import '../styles/main.css'
 
 const navigationItems = [
@@ -134,7 +136,7 @@ function HomePage({ hasSensor, onAddPerson, onConnectSensor, onStartRecording, p
   )
 }
 
-function ProfilePage({ onLogout, onThemeChange, onUserUpdate, theme, user }) {
+function ProfilePage({ notificationStatus, onEnableNotifications, onLogout, onThemeChange, onUserUpdate, theme, user }) {
   const [showThemeDialog, setShowThemeDialog] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
   const [editMode, setEditMode] = useState('menu')
@@ -327,10 +329,11 @@ function ProfilePage({ onLogout, onThemeChange, onUserUpdate, theme, user }) {
                   onClick={() => {
                     if (label === '테마 설정') setShowThemeDialog(true)
                     if (label === '내 정보 수정') setIsEditing(true)
+                    if (label === '알림 설정') onEnableNotifications()
                   }}
                 >
                   <span className="settings-list__label">
-                    {label}
+                    {label === '알림 설정' && notificationStatus === 'enabled' ? '알림 설정됨' : label}
                   </span>
                   <ChevronRight aria-hidden="true" />
                 </button>
@@ -600,6 +603,9 @@ function MainPage({ onLogout, onUserUpdate, user }) {
   const [personToStopMonitoring, setPersonToStopMonitoring] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
   const [apiError, setApiError] = useState('')
+  const [notificationStatus, setNotificationStatus] = useState(
+    () => ('Notification' in window && Notification.permission === 'granted' ? 'enabled' : 'idle'),
+  )
   const activeItem = navigationItems.find(({ id }) => id === activePage)
   const primaryPerson = registeredPeople[0]
   const hasLinkedSensor = Boolean(primaryPerson) && registeredSensors.some(
@@ -628,6 +634,9 @@ function MainPage({ onLogout, onUserUpdate, user }) {
   }, [])
 
   useEffect(() => connectSensorEventStream({
+    onAlert: (alert) => {
+      setApiError(`${alert.title}: ${alert.description}`)
+    },
     onEvent: (event) => {
       setSensorEvents((events) => mergeSensorEvents(event, events))
     },
@@ -635,6 +644,17 @@ function MainPage({ onLogout, onUserUpdate, user }) {
       setApiError(error.message || '실시간 연결을 시작하지 못했어요.')
     },
   }), [])
+
+  const enableNotifications = async () => {
+    try {
+      await enablePushNotifications()
+      setNotificationStatus('enabled')
+      setApiError('푸시 알림을 켰어요.')
+    } catch (error) {
+      setNotificationStatus('error')
+      setApiError(error.message || '푸시 알림을 설정하지 못했어요.')
+    }
+  }
 
   useEffect(() => {
     document.documentElement.dataset.appTheme = theme
@@ -808,8 +828,10 @@ function MainPage({ onLogout, onUserUpdate, user }) {
 
     return (
       <ProfilePage
+        notificationStatus={notificationStatus}
         theme={theme}
         user={user}
+        onEnableNotifications={enableNotifications}
         onLogout={onLogout}
         onThemeChange={setTheme}
         onUserUpdate={onUserUpdate}
@@ -918,6 +940,7 @@ function MainPage({ onLogout, onUserUpdate, user }) {
             )
           })}
         </nav>
+        <Chatbot />
         {sensorToDelete && (
           <ConfirmDialog
             title="센서를 삭제할까요?"

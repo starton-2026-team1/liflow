@@ -18,8 +18,8 @@ from app.repositories.alert_repository import (
 )
 from app.repositories.person_repository import get_person_owner_id
 from app.schemas.alert import AlertResponse
+from app.services.alert_notification_service import notify_alert
 from app.services.alert_service import utc_now
-from app.services.realtime_event_service import realtime_event_manager
 
 logger = logging.getLogger(__name__)
 
@@ -131,16 +131,12 @@ async def run_alert_monitor(stop_event: asyncio.Event) -> None:
             async with async_session_factory() as session:
                 async with session.begin():
                     alerts = await inspect_alert_conditions(session)
-                notifications = []
                 for alert in alerts:
                     owner_id = await get_person_owner_id(session, alert.person_id)
                     if owner_id is not None:
-                        notifications.append((owner_id, AlertResponse.model_validate(alert)))
-            for owner_id, alert in notifications:
-                await realtime_event_manager.publish_sensor_event(
-                    owner_id,
-                    {"type": "alert.created", "data": alert.model_dump(mode="json")},
-                )
+                        payload = AlertResponse.model_validate(alert).model_dump(mode="json")
+                        await notify_alert(session, owner_id, payload)
+                await session.commit()
         except Exception:
             logger.exception("Alert monitor cycle failed")
         try:

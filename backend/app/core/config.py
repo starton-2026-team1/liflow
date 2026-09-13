@@ -8,10 +8,18 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 60
     device_api_key: str = ""
-    cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
+    cors_origins: str = (
+        "http://localhost:5173,http://127.0.0.1:5173,https://localhost,capacitor://localhost"
+    )
     alert_check_interval_seconds: int = 60
     alert_check_start_hour: int = 0
     alert_check_end_hour: int = 24
+    anthropic_api_key: str = ""
+    anthropic_base_url: str = "https://api.anthropic.com"
+    anthropic_model: str = "claude-sonnet-4-6"
+    web_push_vapid_public_key: str = ""
+    web_push_vapid_private_key: str = ""
+    web_push_vapid_subject: str = "mailto:admin@example.com"
 
     @property
     def allowed_cors_origins(self) -> list[str]:

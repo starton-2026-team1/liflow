@@ -21,6 +21,7 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 AUTHENTICATION_TIMEOUT_SECONDS = 5
 REQUEST_TIMEOUT_SECONDS = 15
+AI_REQUEST_TIMEOUT_SECONDS = 90
 IDLE_TIMEOUT_SECONDS = 70
 MAX_MESSAGE_BYTES = 65_536
 
@@ -97,7 +98,12 @@ async def process_request(
 ) -> bool:
     """Commit one request before acknowledging or broadcasting; never hold a session while idle."""
     try:
-        async with asyncio.timeout(REQUEST_TIMEOUT_SECONDS):
+        timeout_seconds = (
+            AI_REQUEST_TIMEOUT_SECONDS
+            if request.path == "/ai-chat/messages"
+            else REQUEST_TIMEOUT_SECONDS
+        )
+        async with asyncio.timeout(timeout_seconds):
             async with async_session_factory() as session:
                 async with session.begin():
                     user = None
