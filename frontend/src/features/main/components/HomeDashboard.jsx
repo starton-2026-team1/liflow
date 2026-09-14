@@ -120,8 +120,8 @@ function WarningStatus({ isConfirmingSafety, model, onConfirmSafety }) {
         <button
           className="home-safety-confirm-action"
           type="button"
-          onClick={() => onConfirmSafety(model.warning.alert)}
-          disabled={isConfirmingSafety}
+          onClick={() => model.warning.alert && onConfirmSafety(model.warning.alert)}
+          disabled={isConfirmingSafety || !model.warning.alert}
         >
           <ShieldCheck aria-hidden="true" />{isConfirmingSafety ? '확인 처리 중...' : '안전을 확인했어요'}
         </button>
@@ -164,22 +164,7 @@ export default function HomeDashboard({ alerts, events, isConfirmingSafety, onCo
   }, [])
 
   const dashboard = createHomeDashboard(person, sensors, events, alerts, now)
-  const previewStatus = import.meta.env.DEV
-    ? new URLSearchParams(window.location.search).get('preview')
-    : null
-  const previewWarning = {
-    alert: { id: 'preview' },
-    sensor: dashboard.latestSensor || dashboard.sensors[0],
-    title: '장시간 움직임 없음',
-    description: '평소보다 35분간 움직임이 없어요.',
-    connectionMessage: '센서 연결 상태는 정상입니다.',
-    evidence: dashboard.latestEvent?.detectedValue || '평소 대비 활동량 -42%',
-  }
-  const model = previewStatus === 'warning'
-    ? { ...dashboard, isWarning: true, warning: dashboard.warning || previewWarning }
-    : previewStatus === 'normal'
-      ? { ...dashboard, isWarning: false, warning: null }
-      : dashboard
+  const model = dashboard
 
   return (
     <div className="home-dashboard">
