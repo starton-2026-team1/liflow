@@ -1,6 +1,3 @@
-const warningStatuses = new Set(['WARNING', 'ALERT', 'ANOMALY'])
-const inactivityLimitMinutes = 30
-
 const toDate = (value) => {
   const date = new Date(value)
   return Number.isNaN(date.getTime()) ? null : date
@@ -30,7 +27,7 @@ const isToday = (date, now) => date
   && date.getMonth() === now.getMonth()
   && date.getDate() === now.getDate()
 
-export function createHomeDashboard(person, sensors, events, now = new Date()) {
+export function createHomeDashboard(person, sensors, events, alerts = [], now = new Date()) {
   const linkedSensors = sensors.filter(({ personId }) => personId === person.id)
   const linkedSensorIds = new Set(linkedSensors.map(({ id }) => id))
   const linkedEvents = events
@@ -40,11 +37,15 @@ export function createHomeDashboard(person, sensors, events, now = new Date()) {
   const latestEvent = linkedEvents[0]
   const latestDate = toDate(latestEvent?.detectedAt)
   const latestSensor = linkedSensors.find(({ id }) => id === latestEvent?.sensorId) || linkedSensors[0]
-  const disconnectedSensor = linkedSensors.find(({ status }) => status === 'disconnected')
-  const warningStatus = warningStatuses.has(latestEvent?.sensorStatus?.toUpperCase())
-  const inactiveMinutes = latestDate ? Math.max(0, Math.floor((now.getTime() - latestDate.getTime()) / 60000)) : 0
-  const inactiveTooLong = Boolean(latestDate) && inactiveMinutes >= inactivityLimitMinutes
-  const isWarning = Boolean(disconnectedSensor || warningStatus || inactiveTooLong)
+  const unconfirmedAlert = alerts
+    .filter((alert) => (
+      alert.personId === person.id
+      && !alert.resolvedAt
+      && !alert.safetyConfirmedAt
+    ))
+    .sort((a, b) => (toDate(b.occurredAt)?.getTime() || 0) - (toDate(a.occurredAt)?.getTime() || 0))[0]
+  const alertSensor = linkedSensors.find(({ id }) => id === unconfirmedAlert?.sensorId)
+  const isWarning = Boolean(unconfirmedAlert)
 
   return {
     person,
@@ -56,13 +57,14 @@ export function createHomeDashboard(person, sensors, events, now = new Date()) {
     latestElapsed: latestDate ? formatElapsed(latestDate, now) : '기록 없음',
     isWarning,
     warning: isWarning ? {
-      sensor: disconnectedSensor || latestSensor,
-      title: disconnectedSensor ? '센서 연결 상태 확인' : '장시간 움직임 없음',
-      description: disconnectedSensor
-        ? `${disconnectedSensor.name}의 연결이 끊겼어요.`
-        : `평소보다 ${inactiveMinutes}분간 움직임이 없어요.`,
-      connectionMessage: disconnectedSensor ? '센서 연결 상태를 확인해 주세요.' : '센서 연결 상태는 정상입니다.',
-      evidence: latestEvent?.detectedValue || '최근 감지 기록 없음',
+      alert: unconfirmedAlert,
+      sensor: alertSensor || latestSensor,
+      title: unconfirmedAlert.title,
+      description: unconfirmedAlert.description,
+      connectionMessage: alertSensor?.status === 'disconnected'
+        ? '센서 연결 상태를 확인해 주세요.'
+        : '센서 연결 상태는 정상입니다.',
+      evidence: unconfirmedAlert.evidence || latestEvent?.detectedValue || '최근 감지 기록 없음',
     } : null,
   }
 }

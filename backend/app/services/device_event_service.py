@@ -6,6 +6,7 @@ from app.models.sensor_event import SensorEvent
 from app.repositories.alert_repository import resolve_active_alerts
 from app.repositories.sensor_event_repository import (
     create_device_sensor_event,
+    create_person_status_event,
     get_sensor_event_by_external_id,
 )
 from app.repositories.sensor_repository import get_sensor_by_device_id
@@ -57,6 +58,14 @@ async def record_device_event(
                 cause="INACTIVITY",
                 resolved_at=utc_now(),
             )
+            if ai_result is not None:
+                await create_person_status_event(
+                    session,
+                    data,
+                    person_id=sensor.person_id,
+                    sensor_id=sensor.id,
+                    status=ai_result["label"],
+                )
         return event, True
     except IntegrityError as exc:
         existing = await get_sensor_event_by_external_id(session, data.event_id)

@@ -93,7 +93,7 @@ function ActivitySummary({ model }) {
   )
 }
 
-function WarningStatus({ model }) {
+function WarningStatus({ isConfirmingSafety, model, onConfirmSafety }) {
   const isSensorDisconnected = model.warning.sensor?.status === 'disconnected'
   const callTarget = () => {
     if (model.person.phone) window.location.href = `tel:${model.person.phone}`
@@ -117,8 +117,13 @@ function WarningStatus({ model }) {
         <button className="primary-action" type="button" onClick={callTarget} disabled={!model.person.phone}>
           <Phone aria-hidden="true" />대상자에게 전화하기
         </button>
-        <button className="home-safety-confirm-action" type="button">
-          <ShieldCheck aria-hidden="true" />안전을 확인했어요
+        <button
+          className="home-safety-confirm-action"
+          type="button"
+          onClick={() => onConfirmSafety(model.warning.alert)}
+          disabled={isConfirmingSafety}
+        >
+          <ShieldCheck aria-hidden="true" />{isConfirmingSafety ? '확인 처리 중...' : '안전을 확인했어요'}
         </button>
       </div>
 
@@ -142,7 +147,7 @@ function WarningStatus({ model }) {
   )
 }
 
-export default function HomeDashboard({ events, onOpenPerson, onOpenWelfare, person, sensors }) {
+export default function HomeDashboard({ alerts, events, isConfirmingSafety, onConfirmSafety, onOpenPerson, onOpenWelfare, person, sensors }) {
   const [now, setNow] = useState(() => new Date())
 
   useEffect(() => {
@@ -158,11 +163,12 @@ export default function HomeDashboard({ events, onOpenPerson, onOpenWelfare, per
     }
   }, [])
 
-  const dashboard = createHomeDashboard(person, sensors, events, now)
+  const dashboard = createHomeDashboard(person, sensors, events, alerts, now)
   const previewStatus = import.meta.env.DEV
     ? new URLSearchParams(window.location.search).get('preview')
     : null
   const previewWarning = {
+    alert: { id: 'preview' },
     sensor: dashboard.latestSensor || dashboard.sensors[0],
     title: '장시간 움직임 없음',
     description: '평소보다 35분간 움직임이 없어요.',
@@ -180,7 +186,7 @@ export default function HomeDashboard({ events, onOpenPerson, onOpenWelfare, per
       <DashboardHeader person={person} warning={model.isWarning} />
       <PersonOverview model={model} onOpenPerson={onOpenPerson} />
       {model.isWarning
-        ? <WarningStatus model={model} />
+        ? <WarningStatus isConfirmingSafety={isConfirmingSafety} model={model} onConfirmSafety={onConfirmSafety} />
         : <NormalStatus model={model} />}
       <ActivitySummary model={model} />
       <WelfareBenefitsCard person={person} onClick={onOpenWelfare} />

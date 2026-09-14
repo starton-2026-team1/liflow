@@ -9,16 +9,12 @@ import '../styles/welfareBenefits.css'
 
 const categories = ['전체', '돌봄', '건강·의료', '생활지원', '주거']
 
-export function WelfareBenefitsCard({ onClick, person }) {
-  const region = parseRegion(person?.livingSpace)
+export function WelfareBenefitsCard({ onClick }) {
   return (
     <button className="welfare-preview" type="button" onClick={onClick}>
       <span className="welfare-preview__content">
         <strong>우리 동네 복지 혜택</strong>
-        <small>{region ? `${region.province} ${region.district}`.trim() : '거주지역을 등록하면'} 받을 수 있는 지원을 확인해 보세요</small>
-        <span className="welfare-preview__tags" aria-hidden="true">
-          <i>돌봄</i><i>건강·의료</i><i>생활지원</i>
-        </span>
+        <small>지역별 복지혜택을 확인해보세요</small>
       </span>
       <ChevronRight aria-hidden="true" />
     </button>
