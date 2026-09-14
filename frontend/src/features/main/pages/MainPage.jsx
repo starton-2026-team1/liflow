@@ -18,6 +18,7 @@ import {
 import { createPerson, deletePerson, getPeople, updatePerson, updatePersonMonitoringStatus } from '../../../api/people'
 import { confirmAlertSafety, getAlerts } from '../../../api/alerts'
 import { connectSensorEventStream } from '../../../api/realtimeEvents'
+import { enablePushNotifications } from '../../../api/pushNotifications'
 import { getSensorEvents } from '../../../api/sensorEvents'
 import { connectSensor, createSensor, deleteSensor, disconnectSensor, getSensors, updateSensor } from '../../../api/sensors'
 import mascot from '../../../assets/mascot.png'
@@ -146,7 +147,7 @@ function HomePage({ hasSensor, onAddPerson, onConnectSensor, onStartRecording, p
   )
 }
 
-function ProfilePage({ onLogout, onOpenNfcRegistration, onThemeChange, onUserUpdate, theme, user }) {
+function ProfilePage({ notificationStatus, onEnableNotifications, onLogout, onOpenNfcRegistration, onThemeChange, onUserUpdate, theme, user }) {
   const [showThemeDialog, setShowThemeDialog] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
   const [editMode, setEditMode] = useState('menu')
@@ -340,10 +341,11 @@ function ProfilePage({ onLogout, onOpenNfcRegistration, onThemeChange, onUserUpd
                     if (label === '테마 설정') setShowThemeDialog(true)
                     if (label === '내 정보 수정') setIsEditing(true)
                     if (label === '안심태그(NFC)') onOpenNfcRegistration?.()
+                    if (label === '알림 설정') onEnableNotifications()
                   }}
                 >
                   <span className="settings-list__label">
-                    {label}
+                    {label === '알림 설정' && notificationStatus === 'enabled' ? '알림 설정됨' : label}
                   </span>
                   <ChevronRight aria-hidden="true" />
                 </button>
@@ -617,6 +619,9 @@ function MainPage({ onLogout, onUserUpdate, user }) {
   const [personToStopMonitoring, setPersonToStopMonitoring] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
   const [apiError, setApiError] = useState('')
+  const [notificationStatus, setNotificationStatus] = useState(
+    () => ('Notification' in window && Notification.permission === 'granted' ? 'enabled' : 'idle'),
+  )
   const activeItem = navigationItems.find(({ id }) => id === activePage)
   const pageLabel = activePage === 'welfare' ? '우리 동네 복지 혜택' : activeItem?.label
   const primaryPerson = registeredPeople[0]
@@ -675,6 +680,17 @@ function MainPage({ onLogout, onUserUpdate, user }) {
       setApiError(error.message || '안전 확인을 처리하지 못했어요.')
     } finally {
       setConfirmingAlertId(null)
+    }
+  }
+
+  const enableNotifications = async () => {
+    try {
+      await enablePushNotifications()
+      setNotificationStatus('enabled')
+      setApiError('푸시 알림을 켰어요.')
+    } catch (error) {
+      setNotificationStatus('error')
+      setApiError(error.message || '푸시 알림을 설정하지 못했어요.')
     }
   }
 
@@ -869,8 +885,10 @@ function MainPage({ onLogout, onUserUpdate, user }) {
 
     return (
       <ProfilePage
+        notificationStatus={notificationStatus}
         theme={theme}
         user={user}
+        onEnableNotifications={enableNotifications}
         onLogout={onLogout}
         onOpenNfcRegistration={() => setIsRegisteringNfc(true)}
         onThemeChange={setTheme}
