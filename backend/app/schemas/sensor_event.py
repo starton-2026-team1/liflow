@@ -42,3 +42,12 @@ class DeviceEventResponse(BaseModel):
     ai_score: float | None = None
     ai_is_anomaly: bool | None = None
     received_at: datetime
+
+class ActivityChangeResponse(BaseModel):
+    date: str
+    activity_count: int
+    change_count: int | None
+
+
+class AverageFirstActivityResponse(BaseModel):
+    average_first_activity: str

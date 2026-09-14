@@ -134,6 +134,7 @@
 .home-status-card--warning .home-status-card__mascot {
   width: 94px;
   height: 94px;
+  pointer-events: none;
   transform: none;
 }
 
@@ -162,6 +163,13 @@
   border-color: #f5dada;
   background: #fffafa;
   box-shadow: 0 5px 16px rgb(105 35 35 / 5%);
+  cursor: grab;
+  touch-action: pan-y;
+  user-select: none;
+}
+
+.home-status-card--warning:active {
+  cursor: grabbing;
 }
 
 .home-status-card--warning span,
@@ -399,6 +407,32 @@
   background: #eaf0fc;
   font-size: 10px;
   font-weight: 700;
+}
+
+.home-warning-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 20px;
+  margin-top: 6px;
+}
+
+.home-warning-pagination button {
+  width: 7px;
+  height: 7px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #cfd6e2;
+  cursor: pointer;
+  transition: width 160ms ease, background-color 160ms ease;
+}
+
+.home-warning-pagination button.is-active {
+  width: 18px;
+  border-radius: 999px;
+  background: var(--color-error);
 }
 
 .home-dashboard button:focus-visible {

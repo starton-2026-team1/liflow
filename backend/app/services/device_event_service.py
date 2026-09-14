@@ -6,11 +6,12 @@ from app.models.sensor_event import SensorEvent
 from app.repositories.alert_repository import resolve_active_alerts
 from app.repositories.sensor_event_repository import (
     create_device_sensor_event,
-    create_person_status_event,
     get_sensor_event_by_external_id,
 )
 from app.repositories.sensor_repository import get_sensor_by_device_id
+from app.repositories.status_event_repository import create_status_event
 from app.schemas.sensor_event import DeviceEventCreate
+from app.schemas.status_event import StatusEventCreate
 from app.services.ai_service import predict_anomaly
 from app.services.alert_service import utc_now
 
@@ -59,12 +60,17 @@ async def record_device_event(
                 resolved_at=utc_now(),
             )
             if ai_result is not None:
-                await create_person_status_event(
+                await create_status_event(
                     session,
-                    data,
+                    StatusEventCreate(
+                        event_id=data.event_id,
+                        device_id=data.device_id,
+                        status="ABNORMAL" if ai_result["is_anomaly"] else "NORMAL",
+                        judged_at=data.detected_at,
+                        detected_value=data.detected_value,
+                    ),
                     person_id=sensor.person_id,
                     sensor_id=sensor.id,
-                    status=ai_result["label"],
                 )
         return event, True
     except IntegrityError as exc:
