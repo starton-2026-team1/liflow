@@ -70,7 +70,7 @@ async def test_sensor_event_rejects_missing_relations(
     assert body["detail"] == "대상자를 찾을 수 없습니다."
 
 
-async def test_weekly_summary_uses_claude_for_recent_events(
+async def test_weekly_summary_reuses_cache_until_a_new_event_arrives(
     client: AsyncClient,
     auth_headers: dict[str, str],
     monkeypatch,
@@ -105,21 +105,48 @@ async def test_weekly_summary_uses_claude_for_recent_events(
         headers=auth_headers,
     )
 
+    claude_calls = 0
+
     async def fake_claude(messages, instructions):
-        assert "저녁 복약함 열림 1건" in messages[0]["content"]
+        nonlocal claude_calls
+        claude_calls += 1
+        assert "저녁 복약함 열림" in messages[0]["content"]
         assert "의료 진단" in instructions
-        return "최근 7일 동안 복약함 사용 기록이 확인됐어요."
+        return f"Claude 호출 {claude_calls}회 요약"
 
     monkeypatch.setattr(
         "app.services.ai_chat_service._ask_claude_with_instructions",
         fake_claude,
     )
-    response = await client.get(
+    first_response = await client.get(
+        f"/api/v1/sensor-events/people/{person_id}/weekly-summary",
+        headers=auth_headers,
+    )
+    cached_response = await client.get(
         f"/api/v1/sensor-events/people/{person_id}/weekly-summary",
         headers=auth_headers,
     )
 
-    assert response.status_code == 200
-    assert response.json()["summary"] == "최근 7일 동안 복약함 사용 기록이 확인됐어요."
-    assert response.json()["event_count"] == 1
-    assert response.json()["provider"] == "anthropic"
+    await client.post(
+        "/api/v1/sensor-events",
+        json={
+            "person_id": person_id,
+            "sensor_id": sensor_response.json()["id"],
+            "detected_at": (datetime.now() - timedelta(hours=1)).isoformat(),
+            "detected_value": "저녁 복약함 열림",
+            "sensor_status": "CONNECTED",
+        },
+        headers=auth_headers,
+    )
+    refreshed_response = await client.get(
+        f"/api/v1/sensor-events/people/{person_id}/weekly-summary",
+        headers=auth_headers,
+    )
+
+    assert first_response.status_code == 200
+    assert first_response.json()["summary"] == "Claude 호출 1회 요약"
+    assert cached_response.json()["summary"] == "Claude 호출 1회 요약"
+    assert refreshed_response.json()["summary"] == "Claude 호출 2회 요약"
+    assert refreshed_response.json()["event_count"] == 2
+    assert refreshed_response.json()["provider"] == "anthropic"
+    assert claude_calls == 2
