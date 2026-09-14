@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ChevronRight, Phone, Radio, ShieldCheck, X } from 'lucide-react'
 import personProfileMascot from '../../../assets/mascot-profile.png'
 import alertMascot from '../../../assets/mascot/alert.png'
@@ -32,7 +32,7 @@ function HomeSensorStatusIcon({ status }) {
 function DashboardHeader({ person, warning }) {
   return (
     <header className={`page-header home-dashboard__header${warning ? ' home-dashboard__header--warning' : ''}`}>
-      <p>{warning ? '살핌이가 이상 징후를 발견했어요' : '안녕하세요!'}</p>
+      <p>{warning ? '리피가 이상 징후를 발견했어요' : '안녕하세요!'}</p>
       <h1>{warning ? '확인이 필요한 상황이 있어요' : <>{person.name}님의 하루를<br />확인해 보세요</>}</h1>
     </header>
   )
@@ -59,7 +59,7 @@ function NormalStatus({ model }) {
         <h2 id="home-status-title">평소와 비슷해요</h2>
         <p>{model.latestEvent ? `최근 움직임이 ${model.latestElapsed}에 감지됐어요.` : '센서가 정상적으로 연결되어 있어요.'}</p>
       </div>
-      <img className="home-status-card__mascot" src={profileMascot} alt="정상 상태인 살핌이" />
+      <img className="home-status-card__mascot" src={profileMascot} alt="정상 상태인 리피" />
     </section>
   )
 }
@@ -94,24 +94,63 @@ function ActivitySummary({ model }) {
 }
 
 function WarningStatus({ isConfirmingSafety, model, onConfirmSafety }) {
-  const isSensorDisconnected = model.warning.sensor?.status === 'disconnected'
+  const [warningIndex, setWarningIndex] = useState(0)
+  const swipeStartX = useRef(null)
+  const activeWarningIndex = Math.min(warningIndex, model.warnings.length - 1)
+  const warning = model.warnings[activeWarningIndex] || model.warning
+  const isSensorDisconnected = warning.sensor?.status === 'disconnected'
+  const selectAdjacentWarning = (direction) => {
+    setWarningIndex((activeWarningIndex + direction + model.warnings.length) % model.warnings.length)
+  }
+  const handleSwipeEnd = (clientX) => {
+    if (swipeStartX.current === null || model.warnings.length < 2) return
+    const distance = clientX - swipeStartX.current
+    swipeStartX.current = null
+    if (Math.abs(distance) < 45) return
+    selectAdjacentWarning(distance < 0 ? 1 : -1)
+  }
   const callTarget = () => {
     if (model.person.phone) window.location.href = `tel:${model.person.phone}`
   }
 
   return (
     <>
-      <section className="home-status-card home-status-card--warning" aria-labelledby="home-warning-title">
+      <section
+        className="home-status-card home-status-card--warning"
+        aria-labelledby="home-warning-title"
+        onPointerDown={(event) => {
+          if (event.pointerType === 'mouse' && event.button !== 0) return
+          swipeStartX.current = event.clientX
+          event.currentTarget.setPointerCapture(event.pointerId)
+        }}
+        onPointerUp={(event) => handleSwipeEnd(event.clientX)}
+        onPointerCancel={() => { swipeStartX.current = null }}
+      >
         <div>
-          <h2 id="home-warning-title">{model.warning.title}</h2>
-          <p>{model.warning.description}<br />{model.warning.connectionMessage}</p>
+          <h2 id="home-warning-title">{warning.title}</h2>
+          <p>{warning.description}<br />{warning.connectionMessage}</p>
         </div>
         <img
           className="home-status-card__mascot"
           src={isSensorDisconnected ? disconnectedMascot : alertMascot}
-          alt={isSensorDisconnected ? '센서 연결 끊김을 알리는 살핌이' : '주의 상황을 알리는 살핌이'}
+          alt={isSensorDisconnected ? '센서 연결 끊김을 알리는 리피' : '주의 상황을 알리는 리피'}
         />
       </section>
+
+      {model.warnings.length > 1 && (
+        <div className="home-warning-pagination" aria-label="이상 징후 카드 선택">
+          {model.warnings.map((item, index) => (
+            <button
+              key={item.alert.id}
+              type="button"
+              className={index === activeWarningIndex ? 'is-active' : ''}
+              aria-label={`${index + 1}번째 이상 징후 보기`}
+              aria-current={index === activeWarningIndex ? 'true' : undefined}
+              onClick={() => setWarningIndex(index)}
+            />
+          ))}
+        </div>
+      )}
 
       <div className="home-warning-actions">
         <button className="primary-action" type="button" onClick={callTarget} disabled={!model.person.phone}>
@@ -120,7 +159,7 @@ function WarningStatus({ isConfirmingSafety, model, onConfirmSafety }) {
         <button
           className="home-safety-confirm-action"
           type="button"
-          onClick={() => onConfirmSafety(model.warning.alert)}
+          onClick={() => onConfirmSafety(warning.alert)}
           disabled={isConfirmingSafety}
         >
           <ShieldCheck aria-hidden="true" />{isConfirmingSafety ? '확인 처리 중...' : '안전을 확인했어요'}
@@ -131,13 +170,13 @@ function WarningStatus({ isConfirmingSafety, model, onConfirmSafety }) {
         <h2 id="situation-evidence-title">상황 근거</h2>
         <article>
           <div className="home-evidence__icon">
-            <HomeSensorStatusIcon status={model.warning.sensor?.status} />
+            <HomeSensorStatusIcon status={warning.sensor?.status} />
           </div>
           <div>
-            <strong>{model.warning.sensor?.name || '움직임 센서'}</strong>
+            <strong>{warning.sensor?.name || '움직임 센서'}</strong>
             <dl>
               <div><dt>마지막 감지</dt><dd>{model.latestTime}</dd></div>
-              <div><dt>감지 내용</dt><dd>{model.warning.evidence}</dd></div>
+              <div><dt>감지 내용</dt><dd>{warning.evidence}</dd></div>
             </dl>
             <small>AI 판단 신뢰도 높음</small>
           </div>
@@ -175,8 +214,29 @@ export default function HomeDashboard({ alerts, events, isConfirmingSafety, onCo
     connectionMessage: '센서 연결 상태는 정상입니다.',
     evidence: dashboard.latestEvent?.detectedValue || '평소 대비 활동량 -42%',
   }
+  const previewAnomalies = [
+    previewWarning,
+    {
+      alert: { id: 'preview-repeat', cause: 'REPEATED_ACTIVITY' },
+      sensor: dashboard.latestSensor || dashboard.sensors[0],
+      title: '평소와 다른 반복 행동',
+      description: '짧은 시간 동안 같은 위치의 움직임이 반복됐어요.',
+      connectionMessage: '센서 연결 상태는 정상입니다.',
+      evidence: '10분 동안 현관 센서 7회 감지',
+    },
+    {
+      alert: { id: 'preview-night', cause: 'UNUSUAL_HOUR' },
+      sensor: dashboard.latestSensor || dashboard.sensors[0],
+      title: '늦은 시간 활동 감지',
+      description: '평소 활동이 드문 시간에 움직임이 감지됐어요.',
+      connectionMessage: '센서 연결 상태는 정상입니다.',
+      evidence: '오전 2:18 침실 센서 감지',
+    },
+  ]
   const model = previewStatus === 'warning'
-    ? { ...dashboard, isWarning: true, warning: dashboard.warning || previewWarning }
+    ? { ...dashboard, isWarning: true, warning: dashboard.warning || previewWarning, warnings: dashboard.warnings.length ? dashboard.warnings : [previewWarning] }
+    : previewStatus === 'anomalies'
+      ? { ...dashboard, isWarning: true, warning: dashboard.warning || previewWarning, warnings: dashboard.warnings.length ? dashboard.warnings : previewAnomalies }
     : previewStatus === 'normal'
       ? { ...dashboard, isWarning: false, warning: null }
       : dashboard

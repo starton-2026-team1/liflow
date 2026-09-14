@@ -71,13 +71,13 @@ function Chatbot() {
   return (
     <div className={`chatbot${isOpen ? ' chatbot--open' : ''}`}>
       {isOpen && (
-        <section className="chatbot-panel" aria-label="살핌이 챗봇">
+        <section className="chatbot-panel" aria-label="리피 챗봇">
           <header className="chatbot-panel__header">
             <span className="chatbot-panel__avatar">
               <img src={chatbotMascot} alt="" />
             </span>
             <div>
-              <strong>살핌이</strong>
+              <strong>리피</strong>
               <span>
                 AI 답변은 의료진의 진단·처방을 대신하지 않습니다.<br />
                 응급 상황에는 즉시 119에 연락해주세요.

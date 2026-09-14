@@ -1,4 +1,4 @@
-from sqlalchemy import Select, or_, select
+from sqlalchemy import Select, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.person import Person
@@ -69,3 +69,83 @@ async def list_sensor_events(
     query = query.order_by(SensorEvent.detected_at.desc()).limit(limit)
     result = await session.scalars(query)
     return list(result.all())
+
+
+
+async def get_activity_change(
+    session: AsyncSession,
+    person_id: int,
+):
+    daily_count = (
+        select(
+            func.date(SensorEvent.detected_at).label("date"),
+            func.count(SensorEvent.id).label("activity_count"),
+        )
+        .where(SensorEvent.person_id == person_id)
+        .group_by(func.date(SensorEvent.detected_at))
+        .order_by(func.date(SensorEvent.detected_at))
+    )
+
+    result = await session.execute(daily_count)
+    rows = result.all()
+
+    response = []
+    previous_count = None
+
+    for row in rows:
+        change_count = (
+            None
+            if previous_count is None
+            else row.activity_count - previous_count
+        )
+
+        response.append(
+            {
+                "date": str(row.date),
+                "activity_count": row.activity_count,
+                "change_count": change_count,
+            }
+        )
+
+        previous_count = row.activity_count
+
+    return response
+
+
+async def get_average_first_activity(
+    session: AsyncSession,
+    person_id: int,
+):
+    query = (
+        select(
+            func.date(SensorEvent.detected_at).label("date"),
+            func.min(SensorEvent.detected_at).label("first_activity"),
+        )
+        .where(SensorEvent.person_id == person_id)
+        .group_by(func.date(SensorEvent.detected_at))
+    )
+
+    result = await session.execute(query)
+    rows = result.all()
+
+    if not rows:
+        return {"average_first_activity": "00:00"}
+
+    total_seconds = 0
+
+    for row in rows:
+        first_time = row.first_activity.time()
+        total_seconds += (
+            first_time.hour * 3600
+            + first_time.minute * 60
+            + first_time.second
+        )
+
+    average_seconds = total_seconds // len(rows)
+
+    hour = average_seconds // 3600
+    minute = (average_seconds % 3600) // 60
+
+    return {
+        "average_first_activity": f"{hour:02d}:{minute:02d}"
+}

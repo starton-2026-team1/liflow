@@ -22,7 +22,7 @@ function AuthLandingPage({ onEmailLogin, onSignUp }) {
           <img
             className="auth-landing__mascot"
             src={mascot}
-            alt="머리 위로 핑크색 하트 초음파 신호를 보내는 파란색 살핌이 캐릭터"
+            alt="머리 위로 핑크색 하트 초음파 신호를 보내는 파란색 리피 캐릭터"
           />
         </div>
 
