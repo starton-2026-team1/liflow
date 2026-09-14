@@ -22,16 +22,31 @@ INSTRUCTIONS = """당신은 독거인 생활 안전 모니터링 서비스의 �
 의료진 상담 필요성을 함께 알리세요. 의식 저하, 호흡 곤란, 흉통, 마비, 심한 출혈 등 응급 징후가
 언급되면 민간요법보다 119 신고와 즉시 의료 도움을 우선 안내하세요.
 답변 마지막에는 반드시 '※ AI 답변은 의료 진단이나 처방을 대신하지 않습니다.'를 포함하세요."""
+NON_MEDICAL_CLAUDE_INSTRUCTIONS = """당신은 생활 안전 서비스의 일반 정보 도우미입니다.
+의학, 증상, 질병, 약물, 치료, 진단, 응급상황에 관한 질문에는 답하지 말고
+'의료 관련 내용은 로컬 의료 AI와 의료진 상담을 이용해 주세요.'라고만 안내하세요.
+그 외 일반적인 제품 사용법, 서비스 이용법, 일상 정보만 간결하게 답하세요."""
+MEDICAL_TERMS = (
+    "증상", "질병", "병원", "의사", "약", "복용", "치료", "진단", "통증",
+    "열", "기침", "감기", "독감", "혈압", "당뇨", "응급", "119", "출혈",
+    "호흡", "흉통", "마비", "의식", "건강", "의학", "수술", "부작용",
+)
 
 
-async def _ask_claude(messages: list[dict[str, str]]) -> str:
+def _is_medical_question(question: str) -> bool:
+    return any(term in question.lower() for term in MEDICAL_TERMS)
+
+
+async def _ask_claude_with_instructions(
+    messages: list[dict[str, str]], instructions: str
+) -> str:
     if not settings.anthropic_api_key:
         raise HTTPException(status_code=503, detail="Anthropic API key is not configured")
 
     payload = {
         "model": settings.anthropic_model,
         "max_tokens": 800,
-        "system": INSTRUCTIONS,
+        "system": instructions,
         "messages": messages,
     }
     try:
@@ -87,8 +102,16 @@ async def ask_ai(session: AsyncSession, user_id: int, data: ChatRequest) -> Chat
             sensor_context += "\n최근 센서 기록이 없습니다."
         try:
             answer = await ask_local_gemma(data.question, sensor_context)
-        except RuntimeError as exc:
-            raise HTTPException(status_code=503, detail=str(exc)) from exc
+        except RuntimeError:
+            if _is_medical_question(data.question):
+                raise HTTPException(
+                    status_code=503,
+                    detail="의료 질문에 답할 로컬 AI를 사용할 수 없습니다",
+                )
+            answer = await _ask_claude_with_instructions(
+                [{"role": "user", "content": data.question}],
+                NON_MEDICAL_CLAUDE_INSTRUCTIONS,
+            )
         model = "gemma-4-E2B-it-medical"
         provider = "local"
         await save_chat_message(
@@ -132,7 +155,10 @@ async def ask_ai(session: AsyncSession, user_id: int, data: ChatRequest) -> Chat
     ]
     messages.append({"role": "user", "content": data.question})
 
-    answer = await _ask_claude(messages)
+    if _is_medical_question(data.question):
+        answer = "의료 관련 내용은 로컬 의료 AI와 의료진 상담을 이용해 주세요."
+    else:
+        answer = await _ask_claude_with_instructions(messages, NON_MEDICAL_CLAUDE_INSTRUCTIONS)
     model = settings.anthropic_model
     provider = "anthropic"
     if not answer:
