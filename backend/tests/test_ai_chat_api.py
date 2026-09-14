@@ -1,4 +1,5 @@
 from typing import Any
+from unittest.mock import AsyncMock
 
 from httpx import AsyncClient
 
@@ -33,21 +34,23 @@ async def test_person_chat_is_disabled_without_sending_data_to_claude(
     client: AsyncClient, auth_headers: dict[str, str], monkeypatch: Any
 ) -> None:
     person_id = await create_person(client, auth_headers)
+    monkeypatch.setattr(settings, "local_ai_enabled", True)
+    local_ai = AsyncMock(side_effect=RuntimeError("GPU unavailable"))
+    claude = AsyncMock(side_effect=AssertionError("Claude must not be called"))
+    monkeypatch.setattr("app.services.ai_chat_service.ask_local_gemma", local_ai)
     monkeypatch.setattr(
-        "app.services.ai_chat_service._ask_claude",
-        lambda _messages: (_ for _ in ()).throw(
-            AssertionError("대상자 데이터 요청에서 Claude를 호출하면 안 됩니다")
-        ),
+        "app.services.ai_chat_service._ask_claude_with_instructions", claude
     )
 
     response = await client.post(
         "/api/v1/ai-chat/messages",
         headers=auth_headers,
-        json={"person_id": person_id, "question": "최근 활동은 어때?"},
+        json={"person_id": person_id, "question": "최근 건강 상태는 어때?"},
     )
 
     assert response.status_code == 503
-    assert "로컬 모델" in response.json()["detail"]
+    assert "로컬 AI" in response.json()["detail"]
+    claude.assert_not_awaited()
 
 
 async def test_chat_rejects_other_guardians_person(
@@ -64,7 +67,7 @@ async def test_chat_rejects_other_guardians_person(
     response = await client.post(
         "/api/v1/ai-chat/messages",
         headers=other_headers,
-        json={"person_id": person_id, "question": "상태를 알려줘"},
+        json={"person_id": person_id, "question": "건강 상태를 알려줘"},
     )
 
     assert response.status_code == 404
@@ -74,7 +77,12 @@ async def test_person_chat_stays_disabled_when_anthropic_key_exists(
     client: AsyncClient, auth_headers: dict[str, str], monkeypatch: Any
 ) -> None:
     person_id = await create_person(client, auth_headers)
+    monkeypatch.setattr(settings, "local_ai_enabled", True)
     monkeypatch.setattr(settings, "anthropic_api_key", "test-key")
+    monkeypatch.setattr(
+        "app.services.ai_chat_service.ask_local_gemma",
+        AsyncMock(side_effect=RuntimeError("GPU unavailable")),
+    )
 
     response = await client.post(
         "/api/v1/ai-chat/messages",
@@ -89,8 +97,12 @@ async def test_general_question_does_not_require_a_person(
     client: AsyncClient, auth_headers: dict[str, str], monkeypatch: Any
 ) -> None:
     fake_claude = FakeClaude()
+    monkeypatch.setattr(settings, "local_ai_enabled", False)
     monkeypatch.setattr(settings, "anthropic_api_key", "test-key")
-    monkeypatch.setattr("app.services.ai_chat_service._ask_claude", fake_claude.ask)
+    monkeypatch.setattr(
+        "app.services.ai_chat_service._ask_claude_with_instructions",
+        lambda messages, _instructions: fake_claude.ask(messages),
+    )
 
     response = await client.post(
         "/api/v1/ai-chat/messages",
@@ -101,6 +113,49 @@ async def test_general_question_does_not_require_a_person(
     assert response.status_code == 200
     assert response.json()["provider"] == "anthropic"
     assert fake_claude.requests[0][-1]["content"] == "생강차를 마실 때 주의할 점은?"
+
+
+async def test_local_ai_chat_without_person_saves_nullable_person(
+    client: AsyncClient, auth_headers: dict[str, str], monkeypatch: Any
+) -> None:
+    monkeypatch.setattr(settings, "local_ai_enabled", True)
+    monkeypatch.setattr(
+        "app.services.ai_chat_service.ask_local_gemma",
+        AsyncMock(return_value="센서 기록을 확인했습니다."),
+    )
+
+    response = await client.post(
+        "/api/v1/ai-chat/messages",
+        headers=auth_headers,
+        json={"question": "최근 상태를 알려줘"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["provider"] == "local"
+
+
+async def test_non_medical_local_failure_falls_back_to_claude(
+    client: AsyncClient, auth_headers: dict[str, str], monkeypatch: Any
+) -> None:
+    monkeypatch.setattr(settings, "local_ai_enabled", True)
+    monkeypatch.setattr(settings, "anthropic_api_key", "test-key")
+    monkeypatch.setattr(
+        "app.services.ai_chat_service.ask_local_gemma",
+        AsyncMock(side_effect=RuntimeError("GPU unavailable")),
+    )
+    monkeypatch.setattr(
+        "app.services.ai_chat_service._ask_claude_with_instructions",
+        AsyncMock(return_value="서비스 사용법 답변"),
+    )
+
+    response = await client.post(
+        "/api/v1/ai-chat/messages",
+        headers=auth_headers,
+        json={"question": "알림 설정 방법을 알려줘"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["provider"] == "anthropic"
 
 
 async def test_chat_is_available_through_authenticated_websocket_rpc(
