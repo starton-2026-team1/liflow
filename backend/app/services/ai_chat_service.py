@@ -45,7 +45,7 @@ async def _ask_claude_with_instructions(
 
     payload = {
         "model": settings.anthropic_model,
-        "max_tokens": 800,
+        "max_tokens": settings.anthropic_max_tokens,
         "system": instructions,
         "messages": messages,
     }
