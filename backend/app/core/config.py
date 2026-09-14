@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     anthropic_api_key: str = ""
     anthropic_base_url: str = "https://api.anthropic.com"
     anthropic_model: str = "claude-sonnet-4-6"
+    anthropic_max_tokens: int = 400
     local_ai_enabled: bool = False
     local_ai_api_url: str = ""
     local_ai_api_key: str = ""
