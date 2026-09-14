@@ -14,6 +14,10 @@ from app.repositories.sensor_event_repository import (
     list_sensor_events,
 )
 from app.repositories.sensor_repository import list_sensors
+from app.repositories.weekly_activity_summary_repository import (
+    get_weekly_activity_summary,
+    save_weekly_activity_summary,
+)
 from app.schemas.ai_chat import ChatAnswer, ChatRequest
 from app.schemas.sensor_event import WeeklyActivitySummaryResponse
 from app.services.local_gemma_service import ask_local_gemma
@@ -261,15 +265,35 @@ async def summarize_weekly_activity(
     )
     current_events = [event for event in events if event.detected_at >= period_start]
     previous_events = [event for event in events if event.detected_at < period_start]
+    period_start_date = period_start.date()
+    period_end_date = (today - timedelta(days=1)).date()
 
     if not current_events:
         return WeeklyActivitySummaryResponse(
             summary="최근 7일에는 분석할 센서 기록이 없어요. 기록이 쌓이면 생활 패턴을 요약해드릴게요.",
-            period_start=period_start.date(),
-            period_end=(today - timedelta(days=1)).date(),
+            period_start=period_start_date,
+            period_end=period_end_date,
             event_count=0,
             provider="local",
             model="deterministic",
+        )
+
+    latest_event_at = current_events[-1].detected_at
+    cached = await get_weekly_activity_summary(
+        session, person_id, period_start_date, period_end_date
+    )
+    if (
+        cached is not None
+        and cached.event_count == len(current_events)
+        and cached.latest_event_at == latest_event_at
+    ):
+        return WeeklyActivitySummaryResponse(
+            summary=cached.summary,
+            period_start=cached.period_start,
+            period_end=cached.period_end,
+            event_count=cached.event_count,
+            provider=cached.provider,
+            model=cached.model,
         )
 
     sensors = {
@@ -315,7 +339,7 @@ async def summarize_weekly_activity(
     )
     prompt = "\n".join(
         [
-            f"분석 기간: {period_start.date().isoformat()} ~ {(today - timedelta(days=1)).date().isoformat()}",
+            f"분석 기간: {period_start_date.isoformat()} ~ {period_end_date.isoformat()}",
             f"이번 주 전체 기록: {len(current_events)}건",
             f"비교: {comparison}",
             f"AI 이상 감지: {anomaly_count}건",
@@ -329,10 +353,22 @@ async def summarize_weekly_activity(
     )
     if not answer:
         raise HTTPException(status_code=503, detail="AI returned an empty summary")
+    await save_weekly_activity_summary(
+        session,
+        cached,
+        person_id=person_id,
+        period_start=period_start_date,
+        period_end=period_end_date,
+        event_count=len(current_events),
+        latest_event_at=latest_event_at,
+        summary=answer,
+        provider="anthropic",
+        model=settings.anthropic_model,
+    )
     return WeeklyActivitySummaryResponse(
         summary=answer,
-        period_start=period_start.date(),
-        period_end=(today - timedelta(days=1)).date(),
+        period_start=period_start_date,
+        period_end=period_end_date,
         event_count=len(current_events),
         provider="anthropic",
         model=settings.anthropic_model,
