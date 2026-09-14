@@ -15,3 +15,7 @@ export async function getSensorEvents(personId) {
   const events = await apiRequest(`/sensor-events${query}`)
   return events.map(toSensorEvent)
 }
+
+export async function getWeeklyActivitySummary(personId) {
+  return apiRequest(`/sensor-events/people/${personId}/weekly-summary`)
+}

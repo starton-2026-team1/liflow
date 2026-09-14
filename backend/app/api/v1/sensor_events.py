@@ -4,7 +4,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.dependencies import CurrentUser
 from app.core.database import get_db_session
 from app.repositories.sensor_event_repository import list_sensor_events
-from app.schemas.sensor_event import SensorEventCreate, SensorEventResponse
+from app.schemas.sensor_event import (
+    SensorEventCreate,
+    SensorEventResponse,
+    WeeklyActivitySummaryResponse,
+)
+from app.services.ai_chat_service import summarize_weekly_activity
 from app.services.person_service import find_person_or_404
 from app.services.sensor_event_service import record_sensor_event
 
@@ -41,3 +46,17 @@ async def get_person_timeline(
 ) -> list[SensorEventResponse]:
     await find_person_or_404(session, person_id, current_user.id)
     return await list_sensor_events(session, current_user.id, person_id, limit)
+
+
+@router.get(
+    "/people/{person_id}/weekly-summary",
+    response_model=WeeklyActivitySummaryResponse,
+)
+async def get_person_weekly_summary(
+    person_id: int,
+    current_user: CurrentUser,
+    session: AsyncSession = Depends(get_db_session),
+) -> WeeklyActivitySummaryResponse:
+    return await summarize_weekly_activity(
+        session, current_user.id, person_id
+    )

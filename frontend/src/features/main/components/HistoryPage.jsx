@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { ChevronDown } from 'lucide-react'
+import { getWeeklyActivitySummary } from '../../../api/sensorEvents'
 import { createHistoryAnalysis } from '../utils/historyAnalysis'
 import '../styles/history.css'
 
@@ -88,6 +89,11 @@ export default function HistoryPage({ events, initialTab = 'analysis', people, s
   const [activeTab, setActiveTab] = useState(initialTab)
   const [personId, setPersonId] = useState(people[0]?.id || '')
   const [sensorFilter, setSensorFilter] = useState('all')
+  const [summaryResult, setSummaryResult] = useState({
+    personId: null,
+    status: 'idle',
+    summary: '',
+  })
   const selectedPerson = people.find(({ id }) => id === personId) || people[0]
   const analysis = useMemo(
     () => createHistoryAnalysis(selectedPerson, sensors, events),
@@ -102,6 +108,36 @@ export default function HistoryPage({ events, initialTab = 'analysis', people, s
       ? analysis.recentEvents
       : analysis.recentEvents.filter(({ sensorId }) => sensorId === sensorFilter),
   ), [analysis.recentEvents, sensorFilter])
+
+  useEffect(() => {
+    if (!selectedPerson?.id) return undefined
+
+    let active = true
+    getWeeklyActivitySummary(selectedPerson.id)
+      .then((result) => {
+        if (!active) return
+        setSummaryResult({
+          personId: selectedPerson.id,
+          status: 'success',
+          summary: result.summary,
+        })
+      })
+      .catch(() => {
+        if (!active) return
+        setSummaryResult({
+          personId: selectedPerson.id,
+          status: 'error',
+          summary: 'AI 요약을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.',
+        })
+      })
+
+    return () => {
+      active = false
+    }
+  }, [selectedPerson?.id])
+  const activeSummary = summaryResult.personId === selectedPerson?.id
+    ? summaryResult
+    : { status: 'loading', summary: '' }
 
   return (
     <div className="history-view">
@@ -140,8 +176,11 @@ export default function HistoryPage({ events, initialTab = 'analysis', people, s
 
           <section className="analysis-section">
             <h2>AI 요약</h2>
-            <div className="history-ai-summary">
-              {analysis.summary.match(/[^.?!]+[.?!]?/g)?.map((sentence) => (
+            <div className="history-ai-summary" aria-live="polite">
+              {(activeSummary.status === 'loading'
+                ? '최근 7일의 생활 기록을 AI가 요약하고 있어요.'
+                : activeSummary.summary || analysis.summary
+              ).match(/[^.?!]+[.?!]?/g)?.map((sentence) => (
                 <p key={sentence}>{sentence.trim()}</p>
               ))}
             </div>

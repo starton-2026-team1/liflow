@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from sqlalchemy import Select, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -90,4 +92,22 @@ async def list_sensor_events(
         query = query.where(SensorEvent.person_id == person_id)
     query = query.order_by(SensorEvent.detected_at.desc()).limit(limit)
     result = await session.scalars(query)
+    return list(result.all())
+
+
+async def list_person_sensor_events_between(
+    session: AsyncSession,
+    person_id: int,
+    start_at: datetime,
+    end_at: datetime,
+) -> list[SensorEvent]:
+    result = await session.scalars(
+        select(SensorEvent)
+        .where(
+            SensorEvent.person_id == person_id,
+            SensorEvent.detected_at >= start_at,
+            SensorEvent.detected_at < end_at,
+        )
+        .order_by(SensorEvent.detected_at)
+    )
     return list(result.all())

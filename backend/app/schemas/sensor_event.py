@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -42,3 +42,12 @@ class DeviceEventResponse(BaseModel):
     ai_score: float | None = None
     ai_is_anomaly: bool | None = None
     received_at: datetime
+
+
+class WeeklyActivitySummaryResponse(BaseModel):
+    summary: str
+    period_start: date
+    period_end: date
+    event_count: int
+    provider: str
+    model: str
