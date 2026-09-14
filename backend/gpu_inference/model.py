@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import re
 from threading import Lock
 
 import torch
@@ -92,7 +93,8 @@ def _generate(
         "\n\n[답변 작성 규칙]\n"
         "세 문장 이내로 답하세요. 참고자료에서 직접 확인되지 않는 숫자, 시간 제한, "
         "응급 기준, 진단 또는 치료법을 절대 추가하지 마세요. 개인 상태를 판단하지 말고 "
-        "일반 정보와 의료진 상담 필요성만 안내하세요."
+        "일반 정보와 의료진 상담 필요성만 안내하세요. 사용자가 수치를 직접 묻지 않았다면 "
+        "측정 횟수를 포함한 어떤 숫자도 답변에 쓰지 마세요."
         if medical_knowledge
         else ""
     )
@@ -124,9 +126,8 @@ def _generate(
     answer = processor.tokenizer.decode(
         output[0][prompt_length:], skip_special_tokens=True
     ).strip()
-    if DISCLAIMER not in answer:
-        answer = f"{answer.rstrip()}\n{DISCLAIMER}"
-    return answer
+    answer = re.sub(r"\s*※ AI 답변은[^\n]*대신하지 않습니다\.?\s*$", "", answer)
+    return f"{answer.rstrip()}\n{DISCLAIMER}"
 
 
 async def generate(
