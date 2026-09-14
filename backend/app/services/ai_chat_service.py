@@ -6,7 +6,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.repositories.chat_repository import list_chat_messages, save_chat_message
+from app.repositories.sensor_event_repository import list_sensor_events
 from app.schemas.ai_chat import ChatAnswer, ChatRequest
+from app.services.local_gemma_service import ask_local_gemma
 from app.services.person_service import find_person_or_404
 
 DISCLAIMER = (
@@ -66,9 +68,49 @@ async def ask_ai(session: AsyncSession, user_id: int, data: ChatRequest) -> Chat
     conversation_id = data.conversation_id or str(uuid4())
     history = await list_chat_messages(session, user_id, conversation_id)
     if person is not None:
-        raise HTTPException(
-            status_code=503,
-            detail="대상자 기록 AI 분석은 로컬 모델 준비 후 제공됩니다",
+        if not settings.local_ai_enabled:
+            raise HTTPException(status_code=503, detail="로컬 AI가 활성화되지 않았습니다")
+        events = await list_sensor_events(session, user_id, person.id, limit=50)
+        sensor_context = "대상자: " + (person.name or "알 수 없음")
+        if events:
+            sensor_context += "\n최근 센서 기록:\n" + "\n".join(
+                f"- {event.detected_at.isoformat()} | 값={event.detected_value} | "
+                f"상태={event.sensor_status} | AI={event.ai_label or '미분석'} "
+                f"({event.ai_score if event.ai_score is not None else '-'})"
+                for event in reversed(events)
+            )
+        else:
+            sensor_context += "\n최근 센서 기록이 없습니다."
+        try:
+            answer = await ask_local_gemma(data.question, sensor_context)
+        except RuntimeError as exc:
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
+        model = "gemma-4-E2B-it-medical"
+        provider = "local"
+        await save_chat_message(
+            session,
+            conversation_id=conversation_id,
+            user_id=user_id,
+            person_id=person.id,
+            role="user",
+            content=data.question,
+            model=None,
+        )
+        await save_chat_message(
+            session,
+            conversation_id=conversation_id,
+            user_id=user_id,
+            person_id=person.id,
+            role="assistant",
+            content=answer,
+            model=model,
+        )
+        return ChatAnswer(
+            conversation_id=conversation_id,
+            answer=answer,
+            model=model,
+            provider=provider,
+            disclaimer=DISCLAIMER,
         )
     # 일반 Claude 상담에는 대상자와 연결된 과거 메시지를 포함하지 않는다.
     allowed_history = (
