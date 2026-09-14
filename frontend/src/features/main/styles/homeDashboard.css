@@ -134,6 +134,7 @@
 .home-status-card--warning .home-status-card__mascot {
   width: 94px;
   height: 94px;
+  pointer-events: none;
   transform: none;
 }
 
