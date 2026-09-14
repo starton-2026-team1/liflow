@@ -5,6 +5,7 @@ from app.api.v1.ai_chat import router as ai_chat_router
 from app.api.v1.alerts import router as alerts_router
 from app.api.v1.auth import router as auth_router
 from app.api.v1.device_events import router as device_events_router
+from app.api.v1.nfc import router as nfc_router
 from app.api.v1.people import router as people_router
 from app.api.v1.realtime_events import router as realtime_events_router
 from app.api.v1.sensor_events import router as sensor_events_router
@@ -24,6 +25,9 @@ api_router.include_router(
     status_events_router, prefix="/status-events", tags=["Status Events"]
 )
 authentication = [Depends(get_current_user)]
+api_router.include_router(
+    nfc_router, prefix="/nfc", tags=["NFC"], dependencies=authentication
+)
 api_router.include_router(
     ai_chat_router,
     prefix="/ai-chat",

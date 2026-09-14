@@ -25,6 +25,9 @@ class ErrorCode(StrEnum):
     INTERNAL_SERVER_ERROR = "INTERNAL_SERVER_ERROR"
     DATABASE_UNAVAILABLE = "DATABASE_UNAVAILABLE"
     DEVICE_API_KEY_NOT_CONFIGURED = "DEVICE_API_KEY_NOT_CONFIGURED"
+    NFC_READER_NOT_CONNECTED = "NFC_READER_NOT_CONNECTED"
+    NFC_TAG_NOT_DETECTED = "NFC_TAG_NOT_DETECTED"
+    NFC_WRITE_FAILED = "NFC_WRITE_FAILED"
 
 
 ERROR_HTTP_STATUS: dict[ErrorCode, int] = {
@@ -48,6 +51,9 @@ ERROR_HTTP_STATUS: dict[ErrorCode, int] = {
     ErrorCode.INTERNAL_SERVER_ERROR: status.HTTP_500_INTERNAL_SERVER_ERROR,
     ErrorCode.DATABASE_UNAVAILABLE: status.HTTP_503_SERVICE_UNAVAILABLE,
     ErrorCode.DEVICE_API_KEY_NOT_CONFIGURED: status.HTTP_503_SERVICE_UNAVAILABLE,
+    ErrorCode.NFC_READER_NOT_CONNECTED: status.HTTP_503_SERVICE_UNAVAILABLE,
+    ErrorCode.NFC_TAG_NOT_DETECTED: status.HTTP_408_REQUEST_TIMEOUT,
+    ErrorCode.NFC_WRITE_FAILED: status.HTTP_422_UNPROCESSABLE_CONTENT,
 }
 
 ERROR_MESSAGES: dict[ErrorCode, str] = {
@@ -71,6 +77,9 @@ ERROR_MESSAGES: dict[ErrorCode, str] = {
     ErrorCode.INTERNAL_SERVER_ERROR: "서버 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.",
     ErrorCode.DATABASE_UNAVAILABLE: "데이터베이스에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.",
     ErrorCode.DEVICE_API_KEY_NOT_CONFIGURED: "서버에 장치 인증 키가 설정되지 않았습니다.",
+    ErrorCode.NFC_READER_NOT_CONNECTED: "NFC 리더기에 연결할 수 없습니다.",
+    ErrorCode.NFC_TAG_NOT_DETECTED: "NFC 태그가 감지되지 않았습니다. 태그를 리더기에 가까이 대주세요.",
+    ErrorCode.NFC_WRITE_FAILED: "NFC 태그에 정보를 기록하지 못했습니다.",
 }
 
 
