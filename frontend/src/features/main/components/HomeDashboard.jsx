@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { ChevronLeft, ChevronRight, Phone, Radio, ShieldCheck, X } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { ChevronRight, Phone, Radio, ShieldCheck, X } from 'lucide-react'
 import personProfileMascot from '../../../assets/mascot-profile.png'
 import alertMascot from '../../../assets/mascot/alert.png'
 import disconnectedMascot from '../../../assets/mascot/disconnected.png'
@@ -95,16 +95,37 @@ function ActivitySummary({ model }) {
 
 function WarningStatus({ isConfirmingSafety, model, onConfirmSafety }) {
   const [warningIndex, setWarningIndex] = useState(0)
+  const swipeStartX = useRef(null)
   const activeWarningIndex = Math.min(warningIndex, model.warnings.length - 1)
   const warning = model.warnings[activeWarningIndex] || model.warning
   const isSensorDisconnected = warning.sensor?.status === 'disconnected'
+  const selectAdjacentWarning = (direction) => {
+    setWarningIndex((activeWarningIndex + direction + model.warnings.length) % model.warnings.length)
+  }
+  const handleSwipeEnd = (clientX) => {
+    if (swipeStartX.current === null || model.warnings.length < 2) return
+    const distance = clientX - swipeStartX.current
+    swipeStartX.current = null
+    if (Math.abs(distance) < 45) return
+    selectAdjacentWarning(distance < 0 ? 1 : -1)
+  }
   const callTarget = () => {
     if (model.person.phone) window.location.href = `tel:${model.person.phone}`
   }
 
   return (
     <>
-      <section className="home-status-card home-status-card--warning" aria-labelledby="home-warning-title">
+      <section
+        className="home-status-card home-status-card--warning"
+        aria-labelledby="home-warning-title"
+        onPointerDown={(event) => {
+          if (event.pointerType === 'mouse' && event.button !== 0) return
+          swipeStartX.current = event.clientX
+          event.currentTarget.setPointerCapture(event.pointerId)
+        }}
+        onPointerUp={(event) => handleSwipeEnd(event.clientX)}
+        onPointerCancel={() => { swipeStartX.current = null }}
+      >
         <div>
           <h2 id="home-warning-title">{warning.title}</h2>
           <p>{warning.description}<br />{warning.connectionMessage}</p>
@@ -118,21 +139,16 @@ function WarningStatus({ isConfirmingSafety, model, onConfirmSafety }) {
 
       {model.warnings.length > 1 && (
         <div className="home-warning-pagination" aria-label="이상 징후 카드 선택">
-          <button
-            type="button"
-            aria-label="이전 이상 징후"
-            onClick={() => setWarningIndex((activeWarningIndex - 1 + model.warnings.length) % model.warnings.length)}
-          >
-            <ChevronLeft aria-hidden="true" />
-          </button>
-          <span><strong>{activeWarningIndex + 1}</strong> / {model.warnings.length}</span>
-          <button
-            type="button"
-            aria-label="다음 이상 징후"
-            onClick={() => setWarningIndex((activeWarningIndex + 1) % model.warnings.length)}
-          >
-            <ChevronRight aria-hidden="true" />
-          </button>
+          {model.warnings.map((item, index) => (
+            <button
+              key={item.alert.id}
+              type="button"
+              className={index === activeWarningIndex ? 'is-active' : ''}
+              aria-label={`${index + 1}번째 이상 징후 보기`}
+              aria-current={index === activeWarningIndex ? 'true' : undefined}
+              onClick={() => setWarningIndex(index)}
+            />
+          ))}
         </div>
       )}
 
