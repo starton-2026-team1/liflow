@@ -134,6 +134,32 @@ async def test_local_ai_chat_without_person_saves_nullable_person(
     assert response.json()["provider"] == "local"
 
 
+async def test_unclear_question_returns_safe_prompt_without_calling_ai(
+    client: AsyncClient, auth_headers: dict[str, str], monkeypatch: Any
+) -> None:
+    local_ai = AsyncMock(side_effect=AssertionError("Local AI must not be called"))
+    claude = AsyncMock(side_effect=AssertionError("Claude must not be called"))
+    monkeypatch.setattr("app.services.ai_chat_service.ask_local_gemma", local_ai)
+    monkeypatch.setattr(
+        "app.services.ai_chat_service._ask_claude_with_instructions", claude
+    )
+
+    response = await client.post(
+        "/api/v1/ai-chat/messages",
+        headers=auth_headers,
+        json={"question": "w"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["answer"] == (
+        "질문을 정확히 이해하지 못했어요. 내용을 조금 더 구체적으로 입력해 주세요. "
+        "긴급한 의료 지원이 필요한 경우 즉시 119에 연락하세요.\n"
+        "※ AI 답변은 의료진의 진단이나 처방을 대신하지 않습니다."
+    )
+    local_ai.assert_not_awaited()
+    claude.assert_not_awaited()
+
+
 async def test_non_medical_local_failure_falls_back_to_claude(
     client: AsyncClient, auth_headers: dict[str, str], monkeypatch: Any
 ) -> None:
