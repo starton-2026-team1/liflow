@@ -1,3 +1,4 @@
+import re
 from uuid import uuid4
 
 import httpx
@@ -14,6 +15,11 @@ from app.services.person_service import find_person_or_404
 DISCLAIMER = (
     "AI 답변은 의료 진단이나 처방을 대신하지 않습니다. "
     "증상이 지속되면 의료진과 상담하세요."
+)
+UNCLEAR_QUESTION_RESPONSE = (
+    "질문을 정확히 이해하지 못했어요. 내용을 조금 더 구체적으로 입력해 주세요. "
+    "긴급한 의료 지원이 필요한 경우 즉시 119에 연락하세요.\n"
+    "※ AI 답변은 의료진의 진단이나 처방을 대신하지 않습니다."
 )
 INSTRUCTIONS = """당신은 독거인 생활 안전 모니터링 서비스의 보호자 지원 AI입니다.
 제공된 데이터에서 확인되는 사실과 추정을 구분하고 없는 사실은 만들지 마세요.
@@ -35,6 +41,11 @@ MEDICAL_TERMS = (
 
 def _is_medical_question(question: str) -> bool:
     return any(term in question.lower() for term in MEDICAL_TERMS)
+
+
+def _is_unclear_question(question: str) -> bool:
+    normalized = question.strip()
+    return len(normalized) < 2 or re.search(r"[A-Za-z0-9가-힣]", normalized) is None
 
 
 async def _ask_claude_with_instructions(
@@ -82,6 +93,32 @@ async def ask_ai(session: AsyncSession, user_id: int, data: ChatRequest) -> Chat
     )
     conversation_id = data.conversation_id or str(uuid4())
     history = await list_chat_messages(session, user_id, conversation_id)
+    if _is_unclear_question(data.question):
+        await save_chat_message(
+            session,
+            conversation_id=conversation_id,
+            user_id=user_id,
+            person_id=person.id if person is not None else None,
+            role="user",
+            content=data.question,
+            model=None,
+        )
+        await save_chat_message(
+            session,
+            conversation_id=conversation_id,
+            user_id=user_id,
+            person_id=person.id if person is not None else None,
+            role="assistant",
+            content=UNCLEAR_QUESTION_RESPONSE,
+            model="input-validation",
+        )
+        return ChatAnswer(
+            conversation_id=conversation_id,
+            answer=UNCLEAR_QUESTION_RESPONSE,
+            model="input-validation",
+            provider="local",
+            disclaimer=DISCLAIMER,
+        )
     if settings.local_ai_enabled:
         events = await list_sensor_events(
             session, user_id, person.id if person is not None else None, limit=50
