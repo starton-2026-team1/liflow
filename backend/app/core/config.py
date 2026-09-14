@@ -18,6 +18,10 @@ class Settings(BaseSettings):
     anthropic_api_key: str = ""
     anthropic_base_url: str = "https://api.anthropic.com"
     anthropic_model: str = "claude-sonnet-4-6"
+    local_ai_enabled: bool = False
+    local_ai_base_model: str = "google/gemma-4-E2B-it"
+    local_ai_adapter_path: str = ""
+    local_ai_max_new_tokens: int = 256
     web_push_vapid_public_key: str = ""
     web_push_vapid_private_key: str = ""
     web_push_vapid_subject: str = "mailto:admin@example.com"
