@@ -7,6 +7,7 @@ from peft import PeftModel
 from transformers import AutoModelForMultimodalLM, AutoProcessor, BitsAndBytesConfig
 
 from gpu_inference.config import settings
+from gpu_inference.medical_rag import search_medical_knowledge
 
 logger = logging.getLogger(__name__)
 
@@ -17,6 +18,8 @@ _inference_lock = asyncio.Lock()
 
 SYSTEM_PROMPT = """당신은 독거인 생활 안전 모니터링 서비스의 보호자 지원 AI입니다.
 제공된 센서 데이터에서 확인되는 사실과 추정을 구분하고 없는 사실은 만들지 마세요.
+제공된 의료 참고자료는 일반 정보로만 활용하고, 자료에 없는 내용을 만들지 마세요.
+의료 참고자료와 대상자의 센서 기록을 서로 혼동하지 마세요.
 한국어로 간결하게 답하고 의료 진단이나 처방을 하지 마세요.
 질문을 이해할 수 없거나 의미 없는 문자만 입력된 경우에는 다른 내용을 추측하지 말고
 '질문을 정확히 이해하지 못했어요. 내용을 조금 더 구체적으로 입력해 주세요. 긴급한 의료 지원이 필요한 경우 즉시 119에 연락하세요.\n※ AI 답변은 의료진의 진단이나 처방을 대신하지 않습니다.'라고만 답하세요.
@@ -70,9 +73,18 @@ def _load_model():
 
 def _generate(question: str, sensor_context: str) -> str:
     model, processor = _load_model()
+    medical_knowledge = search_medical_knowledge(question)
+    knowledge_context = (
+        f"\n\n[의료 참고자료: KoMedQA]\n{medical_knowledge}"
+        if medical_knowledge
+        else ""
+    )
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT},
-        {"role": "user", "content": f"{sensor_context}\n\n질문:\n{question}"},
+        {
+            "role": "user",
+            "content": f"{sensor_context}{knowledge_context}\n\n질문:\n{question}",
+        },
     ]
     prompt = processor.apply_chat_template(
         messages,
