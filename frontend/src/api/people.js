@@ -8,6 +8,7 @@ const toPerson = (person) => ({
   livingSpace: person.living_space,
   healthNotes: person.health_notes || '',
   monitoringStatus: person.monitoring_status,
+  inactivityThresholdMinutes: person.inactivity_threshold_minutes,
 })
 
 export async function getPeople() {
