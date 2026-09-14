@@ -67,11 +67,15 @@ async def ask_ai(session: AsyncSession, user_id: int, data: ChatRequest) -> Chat
     )
     conversation_id = data.conversation_id or str(uuid4())
     history = await list_chat_messages(session, user_id, conversation_id)
-    if person is not None:
-        if not settings.local_ai_enabled:
-            raise HTTPException(status_code=503, detail="로컬 AI가 활성화되지 않았습니다")
-        events = await list_sensor_events(session, user_id, person.id, limit=50)
-        sensor_context = "대상자: " + (person.name or "알 수 없음")
+    if settings.local_ai_enabled:
+        events = await list_sensor_events(
+            session, user_id, person.id if person is not None else None, limit=50
+        )
+        sensor_context = (
+            "대상자: " + (person.name or "알 수 없음")
+            if person is not None
+            else "대상자가 선택되지 않았습니다."
+        )
         if events:
             sensor_context += "\n최근 센서 기록:\n" + "\n".join(
                 f"- {event.detected_at.isoformat()} | 값={event.detected_value} | "
