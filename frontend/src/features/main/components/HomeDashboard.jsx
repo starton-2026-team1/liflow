@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { ChevronRight, Phone, Radio, ShieldCheck, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Phone, Radio, ShieldCheck, X } from 'lucide-react'
 import personProfileMascot from '../../../assets/mascot-profile.png'
 import alertMascot from '../../../assets/mascot/alert.png'
 import disconnectedMascot from '../../../assets/mascot/disconnected.png'
@@ -94,7 +94,10 @@ function ActivitySummary({ model }) {
 }
 
 function WarningStatus({ isConfirmingSafety, model, onConfirmSafety }) {
-  const isSensorDisconnected = model.warning.sensor?.status === 'disconnected'
+  const [warningIndex, setWarningIndex] = useState(0)
+  const activeWarningIndex = Math.min(warningIndex, model.warnings.length - 1)
+  const warning = model.warnings[activeWarningIndex] || model.warning
+  const isSensorDisconnected = warning.sensor?.status === 'disconnected'
   const callTarget = () => {
     if (model.person.phone) window.location.href = `tel:${model.person.phone}`
   }
@@ -103,8 +106,8 @@ function WarningStatus({ isConfirmingSafety, model, onConfirmSafety }) {
     <>
       <section className="home-status-card home-status-card--warning" aria-labelledby="home-warning-title">
         <div>
-          <h2 id="home-warning-title">{model.warning.title}</h2>
-          <p>{model.warning.description}<br />{model.warning.connectionMessage}</p>
+          <h2 id="home-warning-title">{warning.title}</h2>
+          <p>{warning.description}<br />{warning.connectionMessage}</p>
         </div>
         <img
           className="home-status-card__mascot"
@@ -113,6 +116,26 @@ function WarningStatus({ isConfirmingSafety, model, onConfirmSafety }) {
         />
       </section>
 
+      {model.warnings.length > 1 && (
+        <div className="home-warning-pagination" aria-label="이상 징후 카드 선택">
+          <button
+            type="button"
+            aria-label="이전 이상 징후"
+            onClick={() => setWarningIndex((activeWarningIndex - 1 + model.warnings.length) % model.warnings.length)}
+          >
+            <ChevronLeft aria-hidden="true" />
+          </button>
+          <span><strong>{activeWarningIndex + 1}</strong> / {model.warnings.length}</span>
+          <button
+            type="button"
+            aria-label="다음 이상 징후"
+            onClick={() => setWarningIndex((activeWarningIndex + 1) % model.warnings.length)}
+          >
+            <ChevronRight aria-hidden="true" />
+          </button>
+        </div>
+      )}
+
       <div className="home-warning-actions">
         <button className="primary-action" type="button" onClick={callTarget} disabled={!model.person.phone}>
           <Phone aria-hidden="true" />대상자에게 전화하기
@@ -120,7 +143,7 @@ function WarningStatus({ isConfirmingSafety, model, onConfirmSafety }) {
         <button
           className="home-safety-confirm-action"
           type="button"
-          onClick={() => onConfirmSafety(model.warning.alert)}
+          onClick={() => onConfirmSafety(warning.alert)}
           disabled={isConfirmingSafety}
         >
           <ShieldCheck aria-hidden="true" />{isConfirmingSafety ? '확인 처리 중...' : '안전을 확인했어요'}
@@ -131,13 +154,13 @@ function WarningStatus({ isConfirmingSafety, model, onConfirmSafety }) {
         <h2 id="situation-evidence-title">상황 근거</h2>
         <article>
           <div className="home-evidence__icon">
-            <HomeSensorStatusIcon status={model.warning.sensor?.status} />
+            <HomeSensorStatusIcon status={warning.sensor?.status} />
           </div>
           <div>
-            <strong>{model.warning.sensor?.name || '움직임 센서'}</strong>
+            <strong>{warning.sensor?.name || '움직임 센서'}</strong>
             <dl>
               <div><dt>마지막 감지</dt><dd>{model.latestTime}</dd></div>
-              <div><dt>감지 내용</dt><dd>{model.warning.evidence}</dd></div>
+              <div><dt>감지 내용</dt><dd>{warning.evidence}</dd></div>
             </dl>
             <small>AI 판단 신뢰도 높음</small>
           </div>
@@ -175,8 +198,29 @@ export default function HomeDashboard({ alerts, events, isConfirmingSafety, onCo
     connectionMessage: '센서 연결 상태는 정상입니다.',
     evidence: dashboard.latestEvent?.detectedValue || '평소 대비 활동량 -42%',
   }
+  const previewAnomalies = [
+    previewWarning,
+    {
+      alert: { id: 'preview-repeat', cause: 'REPEATED_ACTIVITY' },
+      sensor: dashboard.latestSensor || dashboard.sensors[0],
+      title: '평소와 다른 반복 행동',
+      description: '짧은 시간 동안 같은 위치의 움직임이 반복됐어요.',
+      connectionMessage: '센서 연결 상태는 정상입니다.',
+      evidence: '10분 동안 현관 센서 7회 감지',
+    },
+    {
+      alert: { id: 'preview-night', cause: 'UNUSUAL_HOUR' },
+      sensor: dashboard.latestSensor || dashboard.sensors[0],
+      title: '늦은 시간 활동 감지',
+      description: '평소 활동이 드문 시간에 움직임이 감지됐어요.',
+      connectionMessage: '센서 연결 상태는 정상입니다.',
+      evidence: '오전 2:18 침실 센서 감지',
+    },
+  ]
   const model = previewStatus === 'warning'
-    ? { ...dashboard, isWarning: true, warning: dashboard.warning || previewWarning }
+    ? { ...dashboard, isWarning: true, warning: dashboard.warning || previewWarning, warnings: dashboard.warnings.length ? dashboard.warnings : [previewWarning] }
+    : previewStatus === 'anomalies'
+      ? { ...dashboard, isWarning: true, warning: dashboard.warning || previewWarning, warnings: dashboard.warnings.length ? dashboard.warnings : previewAnomalies }
     : previewStatus === 'normal'
       ? { ...dashboard, isWarning: false, warning: null }
       : dashboard
