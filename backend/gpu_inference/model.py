@@ -11,6 +11,8 @@ from gpu_inference.medical_rag import search_medical_knowledge
 
 logger = logging.getLogger(__name__)
 
+DISCLAIMER = "※ AI 답변은 의료진의 진단이나 처방을 대신하지 않습니다."
+
 _model = None
 _processor = None
 _load_lock = Lock()
@@ -86,11 +88,22 @@ def _generate(
         if medical_knowledge
         else ""
     )
+    medical_output_rules = (
+        "\n\n[답변 작성 규칙]\n"
+        "세 문장 이내로 답하세요. 참고자료에서 직접 확인되지 않는 숫자, 시간 제한, "
+        "응급 기준, 진단 또는 치료법을 절대 추가하지 마세요. 개인 상태를 판단하지 말고 "
+        "일반 정보와 의료진 상담 필요성만 안내하세요."
+        if medical_knowledge
+        else ""
+    )
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT},
         {
             "role": "user",
-            "content": f"{sensor_context}{knowledge_context}\n\n질문:\n{question}",
+            "content": (
+                f"{sensor_context}{knowledge_context}\n\n질문:\n{question}"
+                f"{medical_output_rules}"
+            ),
         },
     ]
     prompt = processor.apply_chat_template(
@@ -108,9 +121,12 @@ def _generate(
             do_sample=False,
         )
     prompt_length = inputs["input_ids"].shape[1]
-    return processor.tokenizer.decode(
+    answer = processor.tokenizer.decode(
         output[0][prompt_length:], skip_special_tokens=True
     ).strip()
+    if DISCLAIMER not in answer:
+        answer = f"{answer.rstrip()}\n{DISCLAIMER}"
+    return answer
 
 
 async def generate(
