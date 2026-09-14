@@ -3,8 +3,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies import CurrentUser
 from app.core.database import get_db_session
-from app.repositories.sensor_event_repository import list_sensor_events
-from app.schemas.sensor_event import SensorEventCreate, SensorEventResponse
+from app.repositories.sensor_event_repository import (
+    get_activity_change,
+    get_average_first_activity,
+    list_sensor_events,
+)
+from app.schemas.sensor_event import (
+    ActivityChangeResponse,
+    AverageFirstActivityResponse,
+    SensorEventCreate,
+    SensorEventResponse,
+)
 from app.services.person_service import find_person_or_404
 from app.services.sensor_event_service import record_sensor_event
 
@@ -41,3 +50,28 @@ async def get_person_timeline(
 ) -> list[SensorEventResponse]:
     await find_person_or_404(session, person_id, current_user.id)
     return await list_sensor_events(session, current_user.id, person_id, limit)
+
+@router.get(
+    "/people/{person_id}/activity-change",
+    response_model=list[ActivityChangeResponse],
+)
+async def get_person_activity_change(
+    person_id: int,
+    current_user: CurrentUser,
+    session: AsyncSession = Depends(get_db_session),
+) -> list[ActivityChangeResponse]:
+    await find_person_or_404(session, person_id, current_user.id)
+    return await get_activity_change(session, person_id)
+
+
+@router.get(
+    "/people/{person_id}/average-first-activity",
+    response_model=AverageFirstActivityResponse,
+)
+async def get_person_average_first_activity(
+    person_id: int,
+    current_user: CurrentUser,
+    session: AsyncSession = Depends(get_db_session),
+) -> AverageFirstActivityResponse:
+    await find_person_or_404(session, person_id, current_user.id)
+    return await get_average_first_activity(session, person_id)
