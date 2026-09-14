@@ -18,6 +18,10 @@ class Settings(BaseSettings):
     anthropic_api_key: str = ""
     anthropic_base_url: str = "https://api.anthropic.com"
     anthropic_model: str = "claude-sonnet-4-6"
+    local_ai_enabled: bool = False
+    local_ai_api_url: str = ""
+    local_ai_api_key: str = ""
+    local_ai_timeout_seconds: float = 120.0
     web_push_vapid_public_key: str = ""
     web_push_vapid_private_key: str = ""
     web_push_vapid_subject: str = "mailto:admin@example.com"
