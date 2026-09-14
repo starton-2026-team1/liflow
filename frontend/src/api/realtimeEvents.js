@@ -1,4 +1,5 @@
 import { API_BASE_URL, getAccessToken } from './client'
+import { toAlert } from './alerts'
 import { toSensorEvent } from './sensorEvents'
 
 const MAX_RECONNECT_DELAY_MS = 30_000
@@ -75,7 +76,7 @@ export function connectSensorEventStream({ onAlert, onEvent, onFatalError }) {
       }
 
       if (message.type === 'alert.created' && message.data) {
-        onAlert?.(message.data)
+        onAlert?.(toAlert(message.data))
       }
     })
 
