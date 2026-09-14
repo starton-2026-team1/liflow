@@ -21,9 +21,6 @@
 .welfare-preview__content small { display: block; margin-top: 5px; color: var(--color-placeholder); font-size: 11px; line-height: 1.45; }
 .welfare-preview > svg { width: 18px; color: #8da4d1; }
 
-.welfare-preview__tags { display: flex; gap: 5px; margin-top: 9px; }
-.welfare-preview__tags i { padding: 4px 7px; border-radius: 10px; color: #5277be; background: #ffffff; font-size: 9px; font-style: normal; font-weight: 700; }
-
 .welfare-page { padding-bottom: 24px; }
 .welfare-page__header { display: flex; align-items: center; gap: 9px; padding: 42px 0 20px; }
 .welfare-page__header > div { min-width: 0; }
