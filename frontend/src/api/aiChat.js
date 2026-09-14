@@ -16,7 +16,11 @@ export async function askAiChat({ conversationId, personId, question }) {
 
   return new Promise((resolve, reject) => {
     const socket = new WebSocket(createWebSocketUrl())
-    const requestId = `ai_${Date.now()}_${crypto.randomUUID().replaceAll('-', '')}`
+    // randomUUID is only available in secure contexts (HTTPS/localhost).
+    // Keep chat usable when the app is opened over a plain HTTP LAN/Tailscale URL.
+    const uuid = globalThis.crypto?.randomUUID?.() ??
+      `${Date.now().toString(16)}-${Math.random().toString(16).slice(2)}-${Math.random().toString(16).slice(2)}`
+    const requestId = `ai_${Date.now()}_${uuid.replaceAll('-', '')}`
     let settled = false
 
     const finish = (callback, value) => {
