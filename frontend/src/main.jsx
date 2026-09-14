@@ -3,6 +3,9 @@ import { createRoot } from 'react-dom/client'
 import 'pretendard/dist/web/variable/pretendardvariable.css'
 import './index.css'
 import App from './App.jsx'
+import { registerNotificationWorker } from './api/pushNotifications'
+
+registerNotificationWorker().catch(() => {})
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
