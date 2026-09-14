@@ -120,8 +120,8 @@ function WarningStatus({ isConfirmingSafety, model, onConfirmSafety }) {
         <button
           className="home-safety-confirm-action"
           type="button"
-          onClick={() => model.warning.alert && onConfirmSafety(model.warning.alert)}
-          disabled={isConfirmingSafety || !model.warning.alert}
+          onClick={() => onConfirmSafety(model.warning.alert)}
+          disabled={isConfirmingSafety}
         >
           <ShieldCheck aria-hidden="true" />{isConfirmingSafety ? '확인 처리 중...' : '안전을 확인했어요'}
         </button>
@@ -149,6 +149,7 @@ function WarningStatus({ isConfirmingSafety, model, onConfirmSafety }) {
 
 export default function HomeDashboard({ alerts, events, isConfirmingSafety, onConfirmSafety, onOpenPerson, onOpenWelfare, person, sensors }) {
   const [now, setNow] = useState(() => new Date())
+  const [acknowledgedWarningKey, setAcknowledgedWarningKey] = useState(null)
 
   useEffect(() => {
     const updateCurrentTime = () => setNow(new Date())
@@ -165,13 +166,24 @@ export default function HomeDashboard({ alerts, events, isConfirmingSafety, onCo
 
   const dashboard = createHomeDashboard(person, sensors, events, alerts, now)
   const model = dashboard
+  const warningKey = model.warning && !model.warning.alert
+    ? [model.warning.sensor?.id, model.latestEvent?.id, model.warning.title].join(':')
+    : null
+  const isWarningAcknowledged = warningKey && warningKey === acknowledgedWarningKey
+  const handleConfirmSafety = (alert) => {
+    if (alert) {
+      onConfirmSafety(alert)
+      return
+    }
+    setAcknowledgedWarningKey(warningKey)
+  }
 
   return (
     <div className="home-dashboard">
-      <DashboardHeader person={person} warning={model.isWarning} />
+      <DashboardHeader person={person} warning={model.isWarning && !isWarningAcknowledged} />
       <PersonOverview model={model} onOpenPerson={onOpenPerson} />
-      {model.isWarning
-        ? <WarningStatus isConfirmingSafety={isConfirmingSafety} model={model} onConfirmSafety={onConfirmSafety} />
+      {model.isWarning && !isWarningAcknowledged
+        ? <WarningStatus isConfirmingSafety={isConfirmingSafety} model={model} onConfirmSafety={handleConfirmSafety} />
         : <NormalStatus model={model} />}
       <ActivitySummary model={model} />
       <WelfareBenefitsCard person={person} onClick={onOpenWelfare} />
