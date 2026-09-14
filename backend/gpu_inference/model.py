@@ -71,9 +71,13 @@ def _load_model():
     return _model, _processor
 
 
-def _generate(question: str, sensor_context: str) -> str:
+def _generate(
+    question: str, sensor_context: str, include_medical_knowledge: bool = False
+) -> str:
     model, processor = _load_model()
-    medical_knowledge = search_medical_knowledge(question)
+    medical_knowledge = (
+        search_medical_knowledge(question) if include_medical_knowledge else ""
+    )
     knowledge_context = (
         f"\n\n[의료 참고자료: KoMedQA]\n{medical_knowledge}"
         if medical_knowledge
@@ -106,9 +110,13 @@ def _generate(question: str, sensor_context: str) -> str:
     ).strip()
 
 
-async def generate(question: str, sensor_context: str) -> str:
+async def generate(
+    question: str, sensor_context: str, include_medical_knowledge: bool = False
+) -> str:
     async with _inference_lock:
-        answer = await asyncio.to_thread(_generate, question, sensor_context)
+        answer = await asyncio.to_thread(
+            _generate, question, sensor_context, include_medical_knowledge
+        )
     if not answer:
         raise RuntimeError("Gemma returned an empty response")
     return answer

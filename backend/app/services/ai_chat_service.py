@@ -138,7 +138,11 @@ async def ask_ai(session: AsyncSession, user_id: int, data: ChatRequest) -> Chat
         else:
             sensor_context += "\n최근 센서 기록이 없습니다."
         try:
-            answer = await ask_local_gemma(data.question, sensor_context)
+            answer = await ask_local_gemma(
+                data.question,
+                sensor_context,
+                include_medical_knowledge=_is_medical_question(data.question),
+            )
             model = "gemma-4-E2B-it-medical"
             provider = "local"
         except RuntimeError as exc:

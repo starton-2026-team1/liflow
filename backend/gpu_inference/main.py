@@ -30,7 +30,11 @@ async def create_answer(
     data: GenerateRequest, _: None = Depends(verify_api_key)
 ) -> GenerateResponse:
     try:
-        answer = await generate(data.question, data.sensor_context)
+        answer = await generate(
+            data.question,
+            data.sensor_context,
+            include_medical_knowledge=data.include_medical_knowledge,
+        )
     except Exception as exc:
         logger.exception("Gemma generation failed")
         raise HTTPException(
