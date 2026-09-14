@@ -31,6 +31,7 @@ import StepFormLayout from '../../../components/common/StepFormLayout'
 import UnderlinedInput from '../../../components/common/UnderlinedInput'
 import PersonRegistrationPage from '../../people/pages/PersonRegistrationPage'
 import SensorRegistrationPage from '../../sensor/pages/SensorRegistrationPage'
+import NfcRegistrationPage from '../../nfc/pages/NfcRegistrationPage'
 import HomeDashboard from '../components/HomeDashboard'
 import HistoryPage from '../components/HistoryPage'
 import Chatbot from '../components/Chatbot'
@@ -145,7 +146,7 @@ function HomePage({ hasSensor, onAddPerson, onConnectSensor, onStartRecording, p
   )
 }
 
-function ProfilePage({ onLogout, onThemeChange, onUserUpdate, theme, user }) {
+function ProfilePage({ onLogout, onOpenNfcRegistration, onThemeChange, onUserUpdate, theme, user }) {
   const [showThemeDialog, setShowThemeDialog] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
   const [editMode, setEditMode] = useState('menu')
@@ -338,6 +339,7 @@ function ProfilePage({ onLogout, onThemeChange, onUserUpdate, theme, user }) {
                   onClick={() => {
                     if (label === '테마 설정') setShowThemeDialog(true)
                     if (label === '내 정보 수정') setIsEditing(true)
+                    if (label === '안심태그(NFC)') onOpenNfcRegistration?.()
                   }}
                 >
                   <span className="settings-list__label">
@@ -599,6 +601,8 @@ function MainPage({ onLogout, onUserUpdate, user }) {
   const [historyInitialTab, setHistoryInitialTab] = useState('analysis')
   const [isRegisteringPerson, setIsRegisteringPerson] = useState(false)
   const [isRegisteringSensor, setIsRegisteringSensor] = useState(false)
+  const [isRegisteringNfc, setIsRegisteringNfc] = useState(false)
+  const [nfcNotice, setNfcNotice] = useState('')
   const [editingPerson, setEditingPerson] = useState(null)
   const [editingSensor, setEditingSensor] = useState(null)
   const [updatingPersonId, setUpdatingPersonId] = useState(null)
@@ -684,6 +688,12 @@ function MainPage({ onLogout, onUserUpdate, user }) {
     const timer = window.setTimeout(() => setApiError(''), 3000)
     return () => window.clearTimeout(timer)
   }, [apiError])
+
+  useEffect(() => {
+    if (!nfcNotice) return undefined
+    const timer = window.setTimeout(() => setNfcNotice(''), 3000)
+    return () => window.clearTimeout(timer)
+  }, [nfcNotice])
 
   const startRecording = async () => {
     try {
@@ -862,6 +872,7 @@ function MainPage({ onLogout, onUserUpdate, user }) {
         theme={theme}
         user={user}
         onLogout={onLogout}
+        onOpenNfcRegistration={() => setIsRegisteringNfc(true)}
         onThemeChange={setTheme}
         onUserUpdate={onUserUpdate}
       />
@@ -917,6 +928,19 @@ function MainPage({ onLogout, onUserUpdate, user }) {
           setRegisteredSensors((sensors) => [...sensors, created])
           setActivePage('sensor')
           setIsRegisteringSensor(false)
+        }}
+      />
+    )
+  }
+
+  if (isRegisteringNfc) {
+    return (
+      <NfcRegistrationPage
+        people={registeredPeople}
+        onBack={() => setIsRegisteringNfc(false)}
+        onRegister={() => {
+          setIsRegisteringNfc(false)
+          setNfcNotice('안심태그 등록이 완료됐어요.')
         }}
       />
     )
@@ -990,6 +1014,7 @@ function MainPage({ onLogout, onUserUpdate, user }) {
           />
         )}
         {apiError && <NoticeToast>{apiError}</NoticeToast>}
+        {nfcNotice && <NoticeToast>{nfcNotice}</NoticeToast>}
       </section>
     </main>
   )
