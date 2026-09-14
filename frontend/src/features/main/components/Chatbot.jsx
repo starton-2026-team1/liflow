@@ -32,14 +32,6 @@ function Chatbot() {
       { id: Date.now(), sender: 'user', text: trimmedMessage },
     ])
     setMessage('')
-    if (/(기록|활동|센서|알림|감지|일주일|지난주|최근\s*상태)/.test(trimmedMessage)) {
-      setMessages((current) => [...current, {
-        id: Date.now() + 1,
-        sender: 'bot',
-        text: '대상자 기록 분석은 개인정보 보호를 위한 로컬 모델이 준비된 후 제공할게요.',
-      }])
-      return
-    }
 
     setIsSending(true)
     try {
