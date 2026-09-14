@@ -52,12 +52,26 @@ async def send_alert_web_push(session: AsyncSession, user_id: int, alert: dict) 
         except WebPushException as exc:
             status_code = getattr(getattr(exc, "response", None), "status_code", None)
             if status_code in (404, 410):
+                logger.warning(
+                    "Web Push subscription expired, deleting: user_id=%s subscription_id=%s "
+                    "status=%s",
+                    user_id,
+                    subscription.id,
+                    status_code,
+                )
                 await delete_push_subscription_by_id(session, subscription.id)
             else:
                 logger.warning(
-                    "Web Push delivery failed for subscription %s: %s", subscription.id, exc
+                    "Web Push delivery failed: user_id=%s subscription_id=%s status=%s",
+                    user_id,
+                    subscription.id,
+                    status_code,
                 )
         except Exception:
             logger.exception(
                 "Unexpected Web Push delivery failure for subscription %s", subscription.id
+            )
+        else:
+            logger.info(
+                "Web Push delivered: user_id=%s subscription_id=%s", user_id, subscription.id
             )

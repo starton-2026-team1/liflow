@@ -18,6 +18,7 @@ import {
 import { createPerson, deletePerson, getPeople, updatePerson, updatePersonMonitoringStatus } from '../../../api/people'
 import { confirmAlertSafety, getAlerts } from '../../../api/alerts'
 import { connectSensorEventStream } from '../../../api/realtimeEvents'
+import { enablePushNotifications } from '../../../api/pushNotifications'
 import { getSensorEvents } from '../../../api/sensorEvents'
 import { connectSensor, createSensor, deleteSensor, disconnectSensor, getSensors, updateSensor } from '../../../api/sensors'
 import mascot from '../../../assets/mascot.png'
@@ -31,6 +32,7 @@ import StepFormLayout from '../../../components/common/StepFormLayout'
 import UnderlinedInput from '../../../components/common/UnderlinedInput'
 import PersonRegistrationPage from '../../people/pages/PersonRegistrationPage'
 import SensorRegistrationPage from '../../sensor/pages/SensorRegistrationPage'
+import NfcRegistrationPage from '../../nfc/pages/NfcRegistrationPage'
 import HomeDashboard from '../components/HomeDashboard'
 import HistoryPage from '../components/HistoryPage'
 import Chatbot from '../components/Chatbot'
@@ -102,7 +104,7 @@ function HomePage({ hasSensor, onAddPerson, onConnectSensor, onStartRecording, p
 
       <section className="onboarding-card" aria-labelledby="onboarding-title">
         <div className="onboarding-card__illustration">
-          <img src={mascot} alt="손을 흔드는 살핌이 캐릭터" />
+          <img src={mascot} alt="손을 흔드는 리피 캐릭터" />
         </div>
         <h2 id="onboarding-title">
           {hasSensor ? '모니터링 준비가 완료됐어요' : hasPerson ? '이제 센서를 연결해 주세요' : '먼저 대상자를 등록해 주세요'}
@@ -145,7 +147,7 @@ function HomePage({ hasSensor, onAddPerson, onConnectSensor, onStartRecording, p
   )
 }
 
-function ProfilePage({ onLogout, onThemeChange, onUserUpdate, theme, user }) {
+function ProfilePage({ notificationStatus, onEnableNotifications, onLogout, onOpenNfcRegistration, onThemeChange, onUserUpdate, theme, user }) {
   const [showThemeDialog, setShowThemeDialog] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
   const [editMode, setEditMode] = useState('menu')
@@ -338,10 +340,12 @@ function ProfilePage({ onLogout, onThemeChange, onUserUpdate, theme, user }) {
                   onClick={() => {
                     if (label === '테마 설정') setShowThemeDialog(true)
                     if (label === '내 정보 수정') setIsEditing(true)
+                    if (label === '안심태그(NFC)') onOpenNfcRegistration?.()
+                    if (label === '알림 설정') onEnableNotifications()
                   }}
                 >
                   <span className="settings-list__label">
-                    {label}
+                    {label === '알림 설정' && notificationStatus === 'enabled' ? '알림 설정됨' : label}
                   </span>
                   <ChevronRight aria-hidden="true" />
                 </button>
@@ -599,6 +603,8 @@ function MainPage({ onLogout, onUserUpdate, user }) {
   const [historyInitialTab, setHistoryInitialTab] = useState('analysis')
   const [isRegisteringPerson, setIsRegisteringPerson] = useState(false)
   const [isRegisteringSensor, setIsRegisteringSensor] = useState(false)
+  const [isRegisteringNfc, setIsRegisteringNfc] = useState(false)
+  const [nfcNotice, setNfcNotice] = useState('')
   const [editingPerson, setEditingPerson] = useState(null)
   const [editingSensor, setEditingSensor] = useState(null)
   const [updatingPersonId, setUpdatingPersonId] = useState(null)
@@ -613,6 +619,9 @@ function MainPage({ onLogout, onUserUpdate, user }) {
   const [personToStopMonitoring, setPersonToStopMonitoring] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
   const [apiError, setApiError] = useState('')
+  const [notificationStatus, setNotificationStatus] = useState(
+    () => ('Notification' in window && Notification.permission === 'granted' ? 'enabled' : 'idle'),
+  )
   const activeItem = navigationItems.find(({ id }) => id === activePage)
   const pageLabel = activePage === 'welfare' ? '우리 동네 복지 혜택' : activeItem?.label
   const primaryPerson = registeredPeople[0]
@@ -696,6 +705,12 @@ function MainPage({ onLogout, onUserUpdate, user }) {
     const timer = window.setTimeout(() => setApiError(''), 3000)
     return () => window.clearTimeout(timer)
   }, [apiError])
+
+  useEffect(() => {
+    if (!nfcNotice) return undefined
+    const timer = window.setTimeout(() => setNfcNotice(''), 3000)
+    return () => window.clearTimeout(timer)
+  }, [nfcNotice])
 
   const startRecording = async () => {
     try {
@@ -871,9 +886,12 @@ function MainPage({ onLogout, onUserUpdate, user }) {
 
     return (
       <ProfilePage
+        notificationStatus={notificationStatus}
         theme={theme}
         user={user}
+        onEnableNotifications={enableNotifications}
         onLogout={onLogout}
+        onOpenNfcRegistration={() => setIsRegisteringNfc(true)}
         onThemeChange={setTheme}
         onUserUpdate={onUserUpdate}
       />
@@ -929,6 +947,19 @@ function MainPage({ onLogout, onUserUpdate, user }) {
           setRegisteredSensors((sensors) => [...sensors, created])
           setActivePage('sensor')
           setIsRegisteringSensor(false)
+        }}
+      />
+    )
+  }
+
+  if (isRegisteringNfc) {
+    return (
+      <NfcRegistrationPage
+        people={registeredPeople}
+        onBack={() => setIsRegisteringNfc(false)}
+        onRegister={() => {
+          setIsRegisteringNfc(false)
+          setNfcNotice('안심태그 등록이 완료됐어요.')
         }}
       />
     )
@@ -1002,6 +1033,7 @@ function MainPage({ onLogout, onUserUpdate, user }) {
           />
         )}
         {apiError && <NoticeToast>{apiError}</NoticeToast>}
+        {nfcNotice && <NoticeToast>{nfcNotice}</NoticeToast>}
       </section>
     </main>
   )
