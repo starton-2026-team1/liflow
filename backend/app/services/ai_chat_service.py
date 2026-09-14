@@ -102,23 +102,25 @@ async def ask_ai(session: AsyncSession, user_id: int, data: ChatRequest) -> Chat
             sensor_context += "\n최근 센서 기록이 없습니다."
         try:
             answer = await ask_local_gemma(data.question, sensor_context)
-        except RuntimeError:
+            model = "gemma-4-E2B-it-medical"
+            provider = "local"
+        except RuntimeError as exc:
             if _is_medical_question(data.question):
                 raise HTTPException(
                     status_code=503,
                     detail="의료 질문에 답할 로컬 AI를 사용할 수 없습니다",
-                )
+                ) from exc
             answer = await _ask_claude_with_instructions(
                 [{"role": "user", "content": data.question}],
                 NON_MEDICAL_CLAUDE_INSTRUCTIONS,
             )
-        model = "gemma-4-E2B-it-medical"
-        provider = "local"
+            model = settings.anthropic_model
+            provider = "anthropic"
         await save_chat_message(
             session,
             conversation_id=conversation_id,
             user_id=user_id,
-            person_id=person.id,
+            person_id=person.id if person is not None else None,
             role="user",
             content=data.question,
             model=None,
@@ -127,7 +129,7 @@ async def ask_ai(session: AsyncSession, user_id: int, data: ChatRequest) -> Chat
             session,
             conversation_id=conversation_id,
             user_id=user_id,
-            person_id=person.id,
+            person_id=person.id if person is not None else None,
             role="assistant",
             content=answer,
             model=model,
