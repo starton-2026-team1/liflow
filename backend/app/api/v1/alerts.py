@@ -1,5 +1,3 @@
-import logging
-
 from fastapi import APIRouter, Depends, Query, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -7,12 +5,11 @@ from app.api.dependencies import CurrentUser
 from app.core.database import get_db_session
 from app.repositories.alert_repository import count_unread_alerts, list_alerts
 from app.schemas.alert import AlertCreate, AlertResponse, UnreadAlertCount
+from app.services.alert_notification_service import notify_alert
 from app.services.alert_service import confirm_alert_safety, create_external_alert, mark_alert_read
 from app.services.person_service import find_person_or_404
-from app.services.realtime_event_service import realtime_event_manager
 
 router = APIRouter()
-logger = logging.getLogger(__name__)
 
 
 @router.get("", response_model=list[AlertResponse])
@@ -48,12 +45,7 @@ async def create_ai_alert(
         return alert
     await session.commit()
     payload = AlertResponse.model_validate(alert).model_dump(mode="json")
-    try:
-        await realtime_event_manager.publish_sensor_event(
-            current_user.id, {"type": "alert.created", "data": payload}
-        )
-    except Exception:
-        logger.exception("Failed to publish alert %s", alert.id)
+    await notify_alert(session, current_user.id, payload)
     return alert
 
 
