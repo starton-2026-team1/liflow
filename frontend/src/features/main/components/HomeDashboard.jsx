@@ -32,7 +32,7 @@ function HomeSensorStatusIcon({ status }) {
 function DashboardHeader({ person, warning }) {
   return (
     <header className={`page-header home-dashboard__header${warning ? ' home-dashboard__header--warning' : ''}`}>
-      <p>{warning ? '살핌이가 이상 징후를 발견했어요' : '안녕하세요!'}</p>
+      <p>{warning ? '리피가 이상 징후를 발견했어요' : '안녕하세요!'}</p>
       <h1>{warning ? '확인이 필요한 상황이 있어요' : <>{person.name}님의 하루를<br />확인해 보세요</>}</h1>
     </header>
   )
@@ -59,7 +59,7 @@ function NormalStatus({ model }) {
         <h2 id="home-status-title">평소와 비슷해요</h2>
         <p>{model.latestEvent ? `최근 움직임이 ${model.latestElapsed}에 감지됐어요.` : '센서가 정상적으로 연결되어 있어요.'}</p>
       </div>
-      <img className="home-status-card__mascot" src={profileMascot} alt="정상 상태인 살핌이" />
+      <img className="home-status-card__mascot" src={profileMascot} alt="정상 상태인 리피" />
     </section>
   )
 }
@@ -133,7 +133,7 @@ function WarningStatus({ isConfirmingSafety, model, onConfirmSafety }) {
         <img
           className="home-status-card__mascot"
           src={isSensorDisconnected ? disconnectedMascot : alertMascot}
-          alt={isSensorDisconnected ? '센서 연결 끊김을 알리는 살핌이' : '주의 상황을 알리는 살핌이'}
+          alt={isSensorDisconnected ? '센서 연결 끊김을 알리는 리피' : '주의 상황을 알리는 리피'}
         />
       </section>
 

@@ -103,7 +103,7 @@ function HomePage({ hasSensor, onAddPerson, onConnectSensor, onStartRecording, p
 
       <section className="onboarding-card" aria-labelledby="onboarding-title">
         <div className="onboarding-card__illustration">
-          <img src={mascot} alt="손을 흔드는 살핌이 캐릭터" />
+          <img src={mascot} alt="손을 흔드는 리피 캐릭터" />
         </div>
         <h2 id="onboarding-title">
           {hasSensor ? '모니터링 준비가 완료됐어요' : hasPerson ? '이제 센서를 연결해 주세요' : '먼저 대상자를 등록해 주세요'}
