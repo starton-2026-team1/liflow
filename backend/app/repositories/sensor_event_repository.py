@@ -2,6 +2,7 @@ from sqlalchemy import Select, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.person import Person
+from app.models.person_status_event import PersonStatusEvent
 from app.models.sensor_event import SensorEvent
 from app.schemas.sensor_event import DeviceEventCreate, SensorEventCreate
 
@@ -41,6 +42,27 @@ async def create_device_sensor_event(
     await session.flush()
     await session.refresh(event)
     return event
+
+
+async def create_person_status_event(
+    session: AsyncSession,
+    data: DeviceEventCreate,
+    person_id: int,
+    sensor_id: int,
+    status: str,
+) -> PersonStatusEvent:
+    status_event = PersonStatusEvent(
+        external_event_id=data.event_id,
+        person_id=person_id,
+        sensor_id=sensor_id,
+        status=status,
+        judged_at=data.detected_at,
+        detected_value=data.detected_value,
+    )
+    session.add(status_event)
+    await session.flush()
+    await session.refresh(status_event)
+    return status_event
 
 
 async def get_sensor_event_by_external_id(
