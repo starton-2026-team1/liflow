@@ -33,10 +33,17 @@ async def record_device_event(
         raise AppError(ErrorCode.SENSOR_NOT_CONNECTED)
 
     ai_result: dict | None = None
-    try:
-        ai_result = predict_anomaly(float(data.detected_value))
-    except (ValueError, TypeError):
-        pass
+    if data.is_anomaly is not None:
+        ai_result = {
+            "label": data.label or ("이상" if data.is_anomaly else "정상"),
+            "score": data.score,
+            "is_anomaly": data.is_anomaly,
+        }
+    else:
+        try:
+            ai_result = predict_anomaly(float(data.detected_value))
+        except (ValueError, TypeError):
+            pass
 
     previous_status_event = await get_latest_status_event(session, sensor.person_id)
     previous_status = previous_status_event.status if previous_status_event is not None else None

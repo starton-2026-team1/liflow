@@ -1,10 +1,24 @@
+import asyncio
+import logging
+import random
 from datetime import datetime
 
 from sqlalchemy import Select, func, select, update
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.alert import Alert
 from app.models.person import Person
+
+logger = logging.getLogger(__name__)
+
+DEADLOCK_ERROR_CODE = 1213
+RESOLVE_ALERTS_MAX_ATTEMPTS = 3
+
+
+def _is_deadlock(exc: OperationalError) -> bool:
+    orig_args = getattr(exc.orig, "args", ())
+    return bool(orig_args) and orig_args[0] == DEADLOCK_ERROR_CODE
 
 
 def owned_alerts_query(user_id: int) -> Select[tuple[Alert]]:
@@ -91,4 +105,29 @@ async def resolve_active_alerts(
     )
     if sensor_id is not None:
         query = query.where(Alert.sensor_id == sensor_id)
-    await session.execute(query.values(resolved_at=resolved_at))
+    query = query.values(resolved_at=resolved_at)
+
+    for attempt in range(1, RESOLVE_ALERTS_MAX_ATTEMPTS + 1):
+        try:
+            async with session.begin_nested():
+                await session.execute(query)
+            return
+        except OperationalError as exc:
+            if not _is_deadlock(exc):
+                raise
+            if attempt == RESOLVE_ALERTS_MAX_ATTEMPTS:
+                logger.error(
+                    "resolve_active_alerts deadlocked %d times for person_id=%s cause=%s; giving up",
+                    attempt,
+                    person_id,
+                    cause,
+                )
+                return
+            logger.warning(
+                "resolve_active_alerts deadlock on attempt %d/%d for person_id=%s cause=%s; retrying",
+                attempt,
+                RESOLVE_ALERTS_MAX_ATTEMPTS,
+                person_id,
+                cause,
+            )
+            await asyncio.sleep(random.uniform(0.1, 0.5))
