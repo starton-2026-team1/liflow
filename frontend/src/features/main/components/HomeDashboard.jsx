@@ -178,7 +178,6 @@ function WarningStatus({ isConfirmingSafety, model, onConfirmSafety }) {
               <div><dt>마지막 감지</dt><dd>{model.latestTime}</dd></div>
               <div><dt>감지 내용</dt><dd>{warning.evidence}</dd></div>
             </dl>
-            <small>AI 판단 신뢰도 높음</small>
           </div>
         </article>
       </section>
