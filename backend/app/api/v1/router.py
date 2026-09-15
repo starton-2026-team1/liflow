@@ -5,6 +5,9 @@ from app.api.v1.ai_chat import router as ai_chat_router
 from app.api.v1.alerts import router as alerts_router
 from app.api.v1.auth import router as auth_router
 from app.api.v1.device_events import router as device_events_router
+from app.api.v1.fcm_device_tokens import router as fcm_device_tokens_router
+from app.api.v1.nfc_tags import public_router as nfc_help_router
+from app.api.v1.nfc_tags import router as nfc_tags_router
 from app.api.v1.people import router as people_router
 from app.api.v1.push_subscriptions import router as push_subscriptions_router
 from app.api.v1.realtime_events import router as realtime_events_router
@@ -24,7 +27,9 @@ api_router.include_router(
 api_router.include_router(
     status_events_router, prefix="/status-events", tags=["Status Events"]
 )
+api_router.include_router(nfc_help_router, prefix="/nfc-help", tags=["NFC Help"])
 authentication = [Depends(get_current_user)]
+api_router.include_router(nfc_tags_router, prefix="/nfc-tags", tags=["NFC Tags"], dependencies=authentication)
 api_router.include_router(
     ai_chat_router,
     prefix="/ai-chat",
@@ -35,6 +40,12 @@ api_router.include_router(
     alerts_router,
     prefix="/alerts",
     tags=["Alerts"],
+    dependencies=authentication,
+)
+api_router.include_router(
+    fcm_device_tokens_router,
+    prefix="/fcm-device-tokens",
+    tags=["Push Notifications"],
     dependencies=authentication,
 )
 api_router.include_router(

@@ -2,6 +2,7 @@ import logging
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.services.fcm_push_service import send_alert_fcm
 from app.services.realtime_event_service import realtime_event_manager
 from app.services.web_push_service import send_alert_web_push
 
@@ -15,3 +16,4 @@ async def notify_alert(session: AsyncSession, user_id: int, alert_payload: dict)
     except Exception:
         logger.exception("WebSocket alert delivery failed for user %s", user_id)
     await send_alert_web_push(session, user_id, alert_payload)
+    await send_alert_fcm(session, user_id, alert_payload)
