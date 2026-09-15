@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.alert import Alert
 from app.repositories.alert_repository import (
+    confirm_all_owned_alerts,
     create_alert,
     get_active_alert,
     get_alert_by_dedup_key,
@@ -47,6 +48,10 @@ async def confirm_alert_safety(session: AsyncSession, alert_id: int, user_id: in
     await session.flush()
     await session.refresh(alert)
     return alert
+
+
+async def confirm_all_alert_safety(session: AsyncSession, user_id: int) -> int:
+    return await confirm_all_owned_alerts(session, user_id, utc_now())
 
 
 async def create_external_alert(

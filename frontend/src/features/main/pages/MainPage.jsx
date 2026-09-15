@@ -16,7 +16,7 @@ import {
   X,
 } from 'lucide-react'
 import { createPerson, deletePerson, getPeople, updatePerson, updatePersonMonitoringStatus } from '../../../api/people'
-import { confirmAlertSafety, getAlerts } from '../../../api/alerts'
+import { closeVisibleNotifications, confirmAllAlertSafety, getAlerts } from '../../../api/alerts'
 import { connectSensorEventStream } from '../../../api/realtimeEvents'
 import { enablePushNotifications } from '../../../api/pushNotifications'
 import { getSensorEvents } from '../../../api/sensorEvents'
@@ -612,7 +612,7 @@ function MainPage({ onLogout, onUserUpdate, user }) {
   const [registeredSensors, setRegisteredSensors] = useState([])
   const [sensorEvents, setSensorEvents] = useState([])
   const [alerts, setAlerts] = useState([])
-  const [confirmingAlertId, setConfirmingAlertId] = useState(null)
+  const [isConfirmingSafety, setIsConfirmingSafety] = useState(false)
   const [sensorToDelete, setSensorToDelete] = useState(null)
   const [isDeletingSensor, setIsDeletingSensor] = useState(false)
   const [updatingConnectionSensorId, setUpdatingConnectionSensorId] = useState(null)
@@ -680,18 +680,18 @@ function MainPage({ onLogout, onUserUpdate, user }) {
     }
   }
 
-  const confirmSafety = async (alert) => {
-    if (!alert || alert.id === 'preview') return
-    setConfirmingAlertId(alert.id)
+  const confirmSafety = async () => {
+    setIsConfirmingSafety(true)
     try {
-      const confirmedAlert = await confirmAlertSafety(alert.id)
-      setAlerts((alerts) => alerts.map((item) => (
-        item.id === confirmedAlert.id ? confirmedAlert : item
-      )))
+      await confirmAllAlertSafety()
+      const refreshedAlerts = await getAlerts()
+      setAlerts(refreshedAlerts)
+      await closeVisibleNotifications().catch(() => {})
+      setApiError('모든 알림의 안전 확인을 완료했어요.')
     } catch (error) {
-      setApiError(error.message || '안전 확인을 처리하지 못했어요.')
+      setApiError(error.message || '안전 확인을 완료하지 못했어요.')
     } finally {
-      setConfirmingAlertId(null)
+      setIsConfirmingSafety(false)
     }
   }
 
@@ -790,7 +790,7 @@ function MainPage({ onLogout, onUserUpdate, user }) {
             person={primaryPerson}
             sensors={registeredSensors}
             events={sensorEvents}
-            isConfirmingSafety={Boolean(confirmingAlertId)}
+            isConfirmingSafety={isConfirmingSafety}
             onConfirmSafety={confirmSafety}
             onOpenPerson={() => setActivePage('people')}
             onOpenWelfare={() => setActivePage('welfare')}

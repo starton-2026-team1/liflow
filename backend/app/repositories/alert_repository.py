@@ -32,6 +32,25 @@ async def count_unread_alerts(session: AsyncSession, user_id: int) -> int:
     return int(await session.scalar(query) or 0)
 
 
+async def confirm_all_owned_alerts(
+    session: AsyncSession, user_id: int, confirmed_at: datetime
+) -> int:
+    owned_person_ids = select(Person.id).where(Person.user_id == user_id)
+    result = await session.execute(
+        update(Alert)
+        .where(
+            Alert.person_id.in_(owned_person_ids),
+            Alert.safety_confirmed_at.is_(None),
+        )
+        .values(
+            read_at=func.coalesce(Alert.read_at, confirmed_at),
+            safety_confirmed_at=confirmed_at,
+        )
+    )
+    await session.commit()
+    return result.rowcount or 0
+
+
 async def get_owned_alert(session: AsyncSession, alert_id: int, user_id: int) -> Alert | None:
     return await session.scalar(owned_alerts_query(user_id).where(Alert.id == alert_id))
 

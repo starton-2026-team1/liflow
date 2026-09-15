@@ -29,3 +29,15 @@ export async function confirmAlertSafety(alertId) {
   })
   return toAlert(alert)
 }
+
+export const confirmAllAlertSafety = () => apiRequest('/alerts/safety-confirmations', {
+  method: 'POST',
+})
+
+export async function closeVisibleNotifications() {
+  if (!('serviceWorker' in navigator)) return
+  const registration = await navigator.serviceWorker.getRegistration()
+  if (!registration?.getNotifications) return
+  const notifications = await registration.getNotifications()
+  notifications.forEach((notification) => notification.close())
+}

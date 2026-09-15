@@ -4,9 +4,19 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.dependencies import CurrentUser
 from app.core.database import get_db_session
 from app.repositories.alert_repository import count_unread_alerts, list_alerts
-from app.schemas.alert import AlertCreate, AlertResponse, UnreadAlertCount
+from app.schemas.alert import (
+    AlertCreate,
+    AlertResponse,
+    AlertSafetyConfirmationCount,
+    UnreadAlertCount,
+)
 from app.services.alert_notification_service import notify_alert
-from app.services.alert_service import confirm_alert_safety, create_external_alert, mark_alert_read
+from app.services.alert_service import (
+    confirm_alert_safety,
+    confirm_all_alert_safety,
+    create_external_alert,
+    mark_alert_read,
+)
 from app.services.person_service import find_person_or_404
 
 router = APIRouter()
@@ -65,3 +75,13 @@ async def confirm_safety(
     session: AsyncSession = Depends(get_db_session),
 ) -> AlertResponse:
     return await confirm_alert_safety(session, alert_id, current_user.id)
+
+
+@router.post("/safety-confirmations", response_model=AlertSafetyConfirmationCount)
+async def confirm_all_safety(
+    current_user: CurrentUser,
+    session: AsyncSession = Depends(get_db_session),
+) -> AlertSafetyConfirmationCount:
+    return AlertSafetyConfirmationCount(
+        count=await confirm_all_alert_safety(session, current_user.id)
+    )

@@ -37,3 +37,7 @@ class AlertCreate(BaseModel):
 
 class UnreadAlertCount(BaseModel):
     count: int
+
+
+class AlertSafetyConfirmationCount(BaseModel):
+    count: int
