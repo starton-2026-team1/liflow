@@ -98,7 +98,7 @@ async def test_weekly_summary_reuses_cache_until_a_new_event_arrives(
         json={
             "person_id": person_id,
             "sensor_id": sensor_response.json()["id"],
-            "detected_at": (datetime.now() - timedelta(days=1)).isoformat(),
+            "detected_at": (datetime.now() - timedelta(days=2)).isoformat(),
             "detected_value": "저녁 복약함 열림",
             "sensor_status": "CONNECTED",
         },
@@ -132,7 +132,7 @@ async def test_weekly_summary_reuses_cache_until_a_new_event_arrives(
         json={
             "person_id": person_id,
             "sensor_id": sensor_response.json()["id"],
-            "detected_at": (datetime.now() - timedelta(hours=1)).isoformat(),
+            "detected_at": (datetime.now() - timedelta(days=1)).isoformat(),
             "detected_value": "저녁 복약함 열림",
             "sensor_status": "CONNECTED",
         },
