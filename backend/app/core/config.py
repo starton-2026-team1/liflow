@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     alert_check_interval_seconds: int = 60
     alert_check_start_hour: int = 0
     alert_check_end_hour: int = 24
+    monitoring_timezone: str = "Asia/Seoul"
     anthropic_api_key: str = Field(
         default="",
         validation_alias=AliasChoices("ANTHROPIC_API_KEY", "CLAUDE_API_KEY"),
