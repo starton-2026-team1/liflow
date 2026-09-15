@@ -43,7 +43,7 @@ React + Vite Dashboard   AI Analysis Pipeline (개발 중)
 
 ## 알림 설정
 
-- 대상자별 `inactivity_threshold_minutes`로 미감지 기준을 설정합니다(기본 30분).
+- 최근 2주 낮 시간 활동 간격의 95백분위에 30분을 더해 대상자별 미활동 기준을 계산합니다. 표본이 부족하면 6시간 안전 기본값을 사용합니다.
 - 서버 환경 변수 `ALERT_CHECK_INTERVAL_SECONDS`, `ALERT_CHECK_START_HOUR`,
   `ALERT_CHECK_END_HOUR`로 점검 주기와 시간대를 설정합니다.
 - DB 반영 전 `cd backend && alembic upgrade head`를 실행합니다.

@@ -1,6 +1,7 @@
 import asyncio
 import logging
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -19,9 +20,27 @@ from app.repositories.alert_repository import (
 from app.repositories.person_repository import get_person_owner_id
 from app.schemas.alert import AlertResponse
 from app.services.alert_notification_service import notify_alert
-from app.services.alert_service import utc_now
+from app.services.inactivity_baseline_service import (
+    DAYTIME_END_HOUR,
+    DAYTIME_START_HOUR,
+    MIN_INTERVAL_COUNT,
+    format_duration,
+    get_inactivity_baseline,
+)
 
 logger = logging.getLogger(__name__)
+
+
+def monitoring_now() -> datetime:
+    try:
+        timezone = ZoneInfo(settings.monitoring_timezone)
+    except ZoneInfoNotFoundError:
+        logger.error(
+            "Unknown monitoring timezone %s; falling back to UTC",
+            settings.monitoring_timezone,
+        )
+        timezone = ZoneInfo("UTC")
+    return datetime.now(timezone).replace(tzinfo=None)
 
 
 def within_check_window(now: datetime) -> bool:
@@ -41,7 +60,7 @@ async def create_once(session: AsyncSession, **values: object):
 
 
 async def inspect_alert_conditions(session: AsyncSession, now: datetime | None = None) -> list:
-    now = now or utc_now()
+    now = now or monitoring_now()
     if not within_check_window(now):
         return []
 
@@ -101,8 +120,42 @@ async def inspect_alert_conditions(session: AsyncSession, now: datetime | None =
             continue
         if latest_at.tzinfo is not None:
             latest_at = latest_at.replace(tzinfo=None)
-        threshold = timedelta(minutes=person.inactivity_threshold_minutes)
-        if now - latest_at >= threshold:
+        if not DAYTIME_START_HOUR <= now.hour < DAYTIME_END_HOUR:
+            continue
+
+        baseline = await get_inactivity_baseline(
+            session, person.id, person.inactivity_threshold_minutes, now
+        )
+        threshold = timedelta(minutes=baseline.threshold_minutes)
+        daytime_start = now.replace(
+            hour=DAYTIME_START_HOUR, minute=0, second=0, microsecond=0
+        )
+        inactivity_started_at = max(latest_at, daytime_start)
+        inactivity_minutes = max(0, int((now - inactivity_started_at).total_seconds() // 60))
+        if inactivity_minutes >= baseline.threshold_minutes:
+            if baseline.is_personalized:
+                description = (
+                    "최근 2주 동안 낮 시간에는 평균 "
+                    f"{format_duration(baseline.average_interval_minutes or 0)}마다 "
+                    "활동이 감지됐어요. "
+                    f"현재 {format_duration(inactivity_minutes)} 동안 활동이 없어 평소보다 긴 "
+                    "미활동 상태입니다. 대상자의 상태를 확인해 주세요."
+                )
+                evidence = (
+                    f"최근 2주 활동 간격 {baseline.interval_count}개 · "
+                    f"95백분위 {format_duration(baseline.percentile_95_minutes or 0)} · "
+                    f"개인화 기준 {format_duration(baseline.threshold_minutes)}"
+                )
+            else:
+                description = (
+                    f"현재 {format_duration(inactivity_minutes)} 동안 활동이 없어요. "
+                    "생활 기록이 더 쌓일 때까지 안전 기본 기준을 적용합니다. "
+                    "대상자의 상태를 확인해 주세요."
+                )
+                evidence = (
+                    f"표본 {baseline.interval_count}/{MIN_INTERVAL_COUNT}개 · "
+                    f"임시 기준 {format_duration(baseline.threshold_minutes)}"
+                )
             alert = await create_once(
                 session,
                 person_id=person.id,
@@ -110,11 +163,11 @@ async def inspect_alert_conditions(session: AsyncSession, now: datetime | None =
                 cause="INACTIVITY",
                 severity="WARNING",
                 title="장시간 움직임 없음",
-                description=f"{person.inactivity_threshold_minutes}분 이상 움직임이 없어요.",
-                evidence=f"마지막 감지 {latest_at.isoformat(timespec='minutes')}",
+                description=description,
+                evidence=evidence,
                 source="SYSTEM",
                 dedup_key=f"inactivity:{person.id}:{latest_at.isoformat()}",
-                occurred_at=latest_at + threshold,
+                occurred_at=inactivity_started_at + threshold,
             )
             if alert is not None:
                 created.append(alert)
