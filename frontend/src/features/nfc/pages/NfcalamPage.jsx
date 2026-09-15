@@ -1,7 +1,7 @@
 import mascotAlert from '../../../assets/mascot/alert.png'
 import '../styles/nfcAlam.css'
 
-function NfcalamPage({ onConfirm }) {
+function NfcalamPage({ onConfirm, error = '' }) {
   return (
     <main className="nfc-alarm-page">
       <section className="nfc-alarm" aria-labelledby="nfc-alarm-title">
@@ -21,6 +21,7 @@ function NfcalamPage({ onConfirm }) {
             보호자가 빠르게 확인할 수 있도록<br />
             현재 상황을 안전하게 전달했어요.
           </p>
+          {error && <p className="nfc-help-error" role="alert">{error}</p>}
         </div>
 
         <button className="nfc-alarm__button" type="button" onClick={onConfirm}>
