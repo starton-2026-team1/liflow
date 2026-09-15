@@ -72,6 +72,39 @@ async def test_duplicate_external_alert_is_suppressed(
     assert duplicate.json()["id"] == first.json()["id"]
 
 
+async def test_person_safety_confirmation_confirms_all_active_alerts(
+    client: AsyncClient, auth_headers: dict[str, str]
+) -> None:
+    person_id = await create_person(client, auth_headers)
+    other_person_id = await create_person(client, auth_headers, name="아버지")
+    first = await client.post(
+        "/api/v1/alerts", headers=auth_headers, json=alert_payload(person_id, "event-1")
+    )
+    second = await client.post(
+        "/api/v1/alerts", headers=auth_headers, json=alert_payload(person_id, "event-2")
+    )
+    other = await client.post(
+        "/api/v1/alerts", headers=auth_headers, json=alert_payload(other_person_id, "event-3")
+    )
+
+    confirmed = await client.post(
+        "/api/v1/alerts/safety-confirmations",
+        params={"person_id": person_id},
+        headers=auth_headers,
+    )
+
+    assert confirmed.status_code == 200
+    assert {item["id"] for item in confirmed.json()} == {first.json()["id"], second.json()["id"]}
+    assert all(item["read_at"] is not None for item in confirmed.json())
+    assert all(item["safety_confirmed_at"] is not None for item in confirmed.json())
+
+    remaining = await client.get(
+        "/api/v1/alerts", params={"person_id": other_person_id}, headers=auth_headers
+    )
+    assert remaining.json()[0]["id"] == other.json()["id"]
+    assert remaining.json()[0]["safety_confirmed_at"] is None
+
+
 async def test_alert_access_is_limited_to_person_owner(
     client: AsyncClient, auth_headers: dict[str, str]
 ) -> None:

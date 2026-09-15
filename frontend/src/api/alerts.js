@@ -29,3 +29,10 @@ export async function confirmAlertSafety(alertId) {
   })
   return toAlert(alert)
 }
+
+export async function confirmAllAlertSafety(personId) {
+  const alerts = await apiRequest(`/alerts/safety-confirmations?person_id=${personId}`, {
+    method: 'POST',
+  })
+  return alerts.map(toAlert)
+}

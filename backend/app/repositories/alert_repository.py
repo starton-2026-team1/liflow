@@ -50,6 +50,19 @@ async def get_owned_alert(session: AsyncSession, alert_id: int, user_id: int) ->
     return await session.scalar(owned_alerts_query(user_id).where(Alert.id == alert_id))
 
 
+async def list_unconfirmed_alerts_for_person(
+    session: AsyncSession, *, person_id: int, user_id: int
+) -> list[Alert]:
+    result = await session.scalars(
+        owned_alerts_query(user_id).where(
+            Alert.person_id == person_id,
+            Alert.resolved_at.is_(None),
+            Alert.safety_confirmed_at.is_(None),
+        )
+    )
+    return list(result.all())
+
+
 async def get_alert_by_dedup_key(session: AsyncSession, dedup_key: str) -> Alert | None:
     return await session.scalar(select(Alert).where(Alert.dedup_key == dedup_key))
 
