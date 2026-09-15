@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.alert import Alert
 from app.repositories.alert_repository import (
+    confirm_all_owned_alerts,
     create_alert,
     get_active_alert,
     get_alert_by_dedup_key,
@@ -41,15 +42,12 @@ async def mark_alert_read(session: AsyncSession, alert_id: int, user_id: int) ->
 async def confirm_alert_safety(session: AsyncSession, alert_id: int, user_id: int) -> Alert:
     alert = await find_alert_or_404(session, alert_id, user_id)
     now = utc_now()
-    if alert.read_at is None:
-        alert.read_at = now
-    if alert.safety_confirmed_at is None:
-        alert.safety_confirmed_at = now
-    await session.flush()
+    await confirm_all_owned_alerts(session, user_id, now)
     await session.refresh(alert)
     return alert
 
 
+<<<<<<< HEAD
 async def confirm_person_safety(session: AsyncSession, person_id: int, user_id: int) -> list[Alert]:
     person = await get_owned_person(session, person_id, user_id)
     if person is None:
@@ -65,6 +63,10 @@ async def confirm_person_safety(session: AsyncSession, person_id: int, user_id: 
     for alert in alerts:
         await session.refresh(alert)
     return alerts
+=======
+async def confirm_all_alert_safety(session: AsyncSession, user_id: int) -> int:
+    return await confirm_all_owned_alerts(session, user_id, utc_now())
+>>>>>>> fabae5b951d7884041490ded438c2d534cae99d1
 
 
 async def create_external_alert(
