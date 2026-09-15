@@ -72,6 +72,14 @@ async def record_device_event(
                     person_id=sensor.person_id,
                     sensor_id=sensor.id,
                 )
+                if not ai_result["is_anomaly"]:
+                    await resolve_active_alerts(
+                        session,
+                        person_id=sensor.person_id,
+                        sensor_id=sensor.id,
+                        cause="ABNORMAL_BEHAVIOR",
+                        resolved_at=data.detected_at,
+                    )
         became_abnormal = bool(
             ai_result is not None and ai_result["is_anomaly"] and previous_status != "ABNORMAL"
         )

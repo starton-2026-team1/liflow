@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import AppError, ErrorCode
 from app.models.person_status_event import PersonStatusEvent
+from app.repositories.alert_repository import resolve_active_alerts
 from app.repositories.person_repository import list_owned_people
 from app.repositories.sensor_repository import get_sensor_by_device_id
 from app.repositories.status_event_repository import (
@@ -56,6 +57,14 @@ async def record_status_event(
         event = await create_status_event(
             session, data, person_id=sensor.person_id, sensor_id=sensor.id
         )
+        if data.status.upper() == "NORMAL":
+            await resolve_active_alerts(
+                session,
+                person_id=sensor.person_id,
+                sensor_id=sensor.id,
+                cause="ABNORMAL_BEHAVIOR",
+                resolved_at=data.judged_at,
+            )
         return event, True, previous_status
     except IntegrityError as exc:
         existing = await get_status_event_by_external_id(session, data.event_id)

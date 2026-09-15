@@ -5,7 +5,12 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.alert import Alert
-from app.repositories.alert_repository import create_alert, get_alert_by_dedup_key, get_owned_alert
+from app.repositories.alert_repository import (
+    create_alert,
+    get_active_alert,
+    get_alert_by_dedup_key,
+    get_owned_alert,
+)
 from app.repositories.person_repository import get_owned_person
 from app.repositories.sensor_repository import get_owned_sensor
 from app.schemas.alert import AlertCreate
@@ -83,8 +88,16 @@ async def create_ai_abnormal_alert(
     external_event_id: str,
     occurred_at: datetime,
     detected_value: str | None,
-) -> Alert:
-    return await create_alert(
+) -> tuple[Alert, bool]:
+    existing = await get_active_alert(
+        session,
+        person_id=person_id,
+        sensor_id=sensor_id,
+        cause="ABNORMAL_BEHAVIOR",
+    )
+    if existing is not None:
+        return existing, False
+    alert = await create_alert(
         session,
         person_id=person_id,
         sensor_id=sensor_id,
@@ -101,3 +114,4 @@ async def create_ai_abnormal_alert(
         dedup_key=f"ai-abnormal:{external_event_id}",
         occurred_at=occurred_at,
     )
+    return alert, True
