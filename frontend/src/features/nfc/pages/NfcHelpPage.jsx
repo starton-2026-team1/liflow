@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { getNfcHelp, getNfcHelpStatus, revealNfcContact, sendNfcHelp } from '../../../api/nfcTags'
+import NfcalamPage from './NfcalamPage'
 import '../styles/nfcHelp.css'
 
 function NfcHelpPage({ token }) {
@@ -7,6 +8,7 @@ function NfcHelpPage({ token }) {
   const [event, setEvent] = useState(null)
   const [status, setStatus] = useState(null)
   const [contact, setContact] = useState(null)
+  const [showSentConfirmation, setShowSentConfirmation] = useState(false)
   const [error, setError] = useState('')
 
   useEffect(() => { getNfcHelp(token).then(setTag).catch((e) => setError(e.message)) }, [token])
@@ -20,10 +22,17 @@ function NfcHelpPage({ token }) {
 
   const notify = async () => {
     setError('')
-    try { setEvent(await sendNfcHelp(token)) } catch (e) { setError(e.message) }
+    try {
+      setEvent(await sendNfcHelp(token))
+      setShowSentConfirmation(true)
+    } catch (e) { setError(e.message) }
   }
   const reveal = async () => {
     try { setContact(await revealNfcContact(event.event_id, event.finder_token)) } catch (e) { setError(e.message) }
+  }
+
+  if (showSentConfirmation) {
+    return <NfcalamPage onConfirm={() => setShowSentConfirmation(false)} />
   }
 
   return <main className="nfc-help-page"><section className="nfc-help-card">
