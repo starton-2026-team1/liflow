@@ -73,3 +73,31 @@ async def create_external_alert(
         if existing is None:
             raise
         return existing, False
+
+
+async def create_ai_abnormal_alert(
+    session: AsyncSession,
+    *,
+    person_id: int,
+    sensor_id: int,
+    external_event_id: str,
+    occurred_at: datetime,
+    detected_value: str | None,
+) -> Alert:
+    return await create_alert(
+        session,
+        person_id=person_id,
+        sensor_id=sensor_id,
+        cause="ABNORMAL_BEHAVIOR",
+        severity="WARNING",
+        title="이상행동 감지",
+        description="센서 AI가 평소와 다른 행동을 감지했어요. 대상자의 상태를 확인해 주세요.",
+        evidence=(
+            f"AI 판정 센서값: {detected_value}"
+            if detected_value is not None
+            else "AI 이상행동 판정"
+        ),
+        source="AI",
+        dedup_key=f"ai-abnormal:{external_event_id}",
+        occurred_at=occurred_at,
+    )

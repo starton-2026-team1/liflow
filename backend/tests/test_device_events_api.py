@@ -62,9 +62,7 @@ async def test_device_event_is_saved_and_duplicate_is_idempotent(
         "app.api.v1.device_events.realtime_event_manager.publish_sensor_event",
         capture_event,
     )
-    person_id, sensor_id = await register_sensor(
-        client, auth_headers, device_id="DEVICE-001"
-    )
+    person_id, sensor_id = await register_sensor(client, auth_headers, device_id="DEVICE-001")
     data = {
         "event_id": "event-001",
         "device_id": "DEVICE-001",
@@ -73,12 +71,8 @@ async def test_device_event_is_saved_and_duplicate_is_idempotent(
     }
     device_headers = {"X-Device-Key": "test-device-api-key"}
 
-    created = await client.post(
-        "/api/v1/device-events", headers=device_headers, json=data
-    )
-    duplicate = await client.post(
-        "/api/v1/device-events", headers=device_headers, json=data
-    )
+    created = await client.post("/api/v1/device-events", headers=device_headers, json=data)
+    duplicate = await client.post("/api/v1/device-events", headers=device_headers, json=data)
     assert created.status_code == 201
     assert created.json()["person_id"] == person_id
     assert created.json()["sensor_id"] == sensor_id
@@ -173,7 +167,41 @@ async def test_device_event_rejects_reused_event_id_with_different_data(
     ).status_code == 201
 
     conflicting = {**original, "detected_value": "CLOSED"}
-    response = await client.post(
-        "/api/v1/device-events", headers=headers, json=conflicting
-    )
+    response = await client.post("/api/v1/device-events", headers=headers, json=conflicting)
     assert response.status_code == 409
+
+
+async def test_device_ai_anomaly_creates_and_pushes_alert(
+    client: AsyncClient, auth_headers: dict[str, str], monkeypatch: Any
+) -> None:
+    pushed: list[tuple[int, dict[str, Any]]] = []
+
+    async def capture_push(_session: Any, user_id: int, payload: dict[str, Any]) -> None:
+        pushed.append((user_id, payload))
+
+    monkeypatch.setattr(
+        "app.services.device_event_service.predict_anomaly",
+        lambda _value: {"label": "anomaly", "score": 0.99, "is_anomaly": True},
+    )
+    monkeypatch.setattr("app.api.v1.device_events.notify_alert", capture_push)
+    person_id, _ = await register_sensor(client, auth_headers, device_id="DEVICE-AI-PUSH-001")
+
+    response = await client.post(
+        "/api/v1/device-events",
+        headers={"X-Device-Key": "test-device-api-key"},
+        json={
+            "event_id": "device-ai-push-1",
+            "device_id": "DEVICE-AI-PUSH-001",
+            "detected_at": datetime.now().isoformat(),
+            "detected_value": "91.2",
+        },
+    )
+
+    assert response.status_code == 201
+    alerts = await client.get(
+        "/api/v1/alerts", params={"person_id": person_id}, headers=auth_headers
+    )
+    assert alerts.status_code == 200
+    assert len(alerts.json()) == 1
+    assert alerts.json()[0]["cause"] == "ABNORMAL_BEHAVIOR"
+    assert len(pushed) == 1
