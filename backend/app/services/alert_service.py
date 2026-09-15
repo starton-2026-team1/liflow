@@ -10,6 +10,7 @@ from app.repositories.alert_repository import (
     get_active_alert,
     get_alert_by_dedup_key,
     get_owned_alert,
+    list_unconfirmed_alerts_for_person,
 )
 from app.repositories.person_repository import get_owned_person
 from app.repositories.sensor_repository import get_owned_sensor
@@ -47,6 +48,23 @@ async def confirm_alert_safety(session: AsyncSession, alert_id: int, user_id: in
     await session.flush()
     await session.refresh(alert)
     return alert
+
+
+async def confirm_person_safety(session: AsyncSession, person_id: int, user_id: int) -> list[Alert]:
+    person = await get_owned_person(session, person_id, user_id)
+    if person is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Person not found")
+
+    alerts = await list_unconfirmed_alerts_for_person(session, person_id=person_id, user_id=user_id)
+    now = utc_now()
+    for alert in alerts:
+        if alert.read_at is None:
+            alert.read_at = now
+        alert.safety_confirmed_at = now
+    await session.flush()
+    for alert in alerts:
+        await session.refresh(alert)
+    return alerts
 
 
 async def create_external_alert(
