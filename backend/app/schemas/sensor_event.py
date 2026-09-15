@@ -26,6 +26,9 @@ class DeviceEventCreate(BaseModel):
     device_id: str = Field(min_length=1, max_length=100)
     detected_at: datetime
     detected_value: str = Field(min_length=1, max_length=255)
+    is_anomaly: bool | None = None
+    label: str | None = Field(default=None, max_length=50)
+    score: float | None = None
 
 
 class DeviceEventResponse(BaseModel):
