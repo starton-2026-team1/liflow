@@ -1,22 +1,36 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { revealNfcContact, sendNfcHelp } from '../../../api/nfcTags'
+import { getNfcHelpStatus, revealNfcContact, sendNfcHelp } from '../../../api/nfcTags'
 import NfcalamPage from './NfcalamPage'
 import NfcGuardianContactPage from './NfcGuardianContactPage'
 import '../styles/nfcHelp.css'
 
 function NfcHelpPage({ token }) {
   const [event, setEvent] = useState(null)
+  const [status, setStatus] = useState(null)
   const [contact, setContact] = useState(null)
-  const [showSentConfirmation, setShowSentConfirmation] = useState(true)
+  const [confirmationAccepted, setConfirmationAccepted] = useState(false)
   const [error, setError] = useState('')
   const notificationRequestRef = useRef(null)
 
   const ensureHelpEvent = useCallback(() => {
     if (!notificationRequestRef.current) {
-      notificationRequestRef.current = sendNfcHelp(token).then((createdEvent) => {
-        setEvent(createdEvent)
-        return createdEvent
-      })
+      const storageKey = `liflow:nfc-help:${token}`
+      try {
+        const cachedEvent = JSON.parse(window.localStorage.getItem(storageKey))
+        const cacheExpiresAt = new Date(cachedEvent?.contact_available_at).getTime() + 60 * 60_000
+        if (cachedEvent?.event_id && cachedEvent?.finder_token && Date.now() < cacheExpiresAt) {
+          notificationRequestRef.current = Promise.resolve(cachedEvent)
+        }
+      } catch {
+        window.localStorage.removeItem(storageKey)
+      }
+      if (!notificationRequestRef.current) {
+        notificationRequestRef.current = sendNfcHelp(token).then((createdEvent) => {
+          window.localStorage.setItem(storageKey, JSON.stringify(createdEvent))
+          return createdEvent
+        })
+      }
+      notificationRequestRef.current.then(setEvent)
     }
     return notificationRequestRef.current
   }, [token])
@@ -25,26 +39,34 @@ function NfcHelpPage({ token }) {
     ensureHelpEvent().catch((e) => setError(e.message))
   }, [ensureHelpEvent])
 
-  const confirmContact = async () => {
-    setError('')
-    try {
-      const activeEvent = event || await ensureHelpEvent()
-      const nextContact = contact || await revealNfcContact(activeEvent.event_id, activeEvent.finder_token)
-      setContact(nextContact)
-      setShowSentConfirmation(false)
-    } catch (e) {
-      setError(e.message)
-    }
-  }
-  if (showSentConfirmation) {
-    return <NfcalamPage onConfirm={confirmContact} error={error} />
-  }
+  useEffect(() => {
+    if (!event) return undefined
+    const check = () => getNfcHelpStatus(event.event_id, event.finder_token)
+      .then(setStatus)
+      .catch((e) => setError(e.message))
+    check()
+    const timer = window.setInterval(check, 5000)
+    return () => window.clearInterval(timer)
+  }, [event])
+
+  useEffect(() => {
+    if (!confirmationAccepted || !status?.contact_available || !event || contact) return
+    revealNfcContact(event.event_id, event.finder_token)
+      .then(setContact)
+      .catch((e) => setError(e.message))
+  }, [confirmationAccepted, contact, event, status?.contact_available])
 
   if (contact) {
     return <NfcGuardianContactPage guardianPhone={contact.guardian_phone} />
   }
 
-  return <NfcalamPage onConfirm={confirmContact} error={error} />
+  return (
+    <NfcalamPage
+      onConfirm={() => setConfirmationAccepted(true)}
+      waiting={confirmationAccepted}
+      error={error}
+    />
+  )
 }
 
 export default NfcHelpPage

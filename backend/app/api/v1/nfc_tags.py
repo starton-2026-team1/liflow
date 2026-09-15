@@ -1,4 +1,4 @@
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from hashlib import sha256
 from secrets import token_urlsafe
 
@@ -116,10 +116,11 @@ async def send_help(token: str, session: AsyncSession = Depends(get_db_session))
     await notify_alert(
         session, person.user_id, AlertResponse.model_validate(alert).model_dump(mode="json")
     )
+    available_at = now + timedelta(minutes=settings.nfc_contact_reveal_delay_minutes)
     return NfcHelpCreated(
         event_id=event.id,
         finder_token=finder_token,
-        contact_available_at=now if tag.contact_reveal_enabled else None,
+        contact_available_at=available_at if tag.contact_reveal_enabled else None,
         message="보호자에게 알림을 보냈습니다.",
     )
 
@@ -131,11 +132,14 @@ async def help_status(
     session: AsyncSession = Depends(get_db_session),
 ):
     event, alert, tag = await find_event(session, event_id, finder_token)
+    available_at = event.requested_at + timedelta(minutes=settings.nfc_contact_reveal_delay_minutes)
     acknowledged = alert.safety_confirmed_at is not None
     return NfcHelpStatus(
         acknowledged=acknowledged,
-        contact_available=tag.contact_reveal_enabled,
-        contact_available_at=event.requested_at if tag.contact_reveal_enabled else None,
+        contact_available=(
+            tag.contact_reveal_enabled and not acknowledged and utc_now() >= available_at
+        ),
+        contact_available_at=available_at if tag.contact_reveal_enabled else None,
     )
 
 
@@ -145,9 +149,12 @@ async def reveal_contact(
     finder_token: str = Query(min_length=20),
     session: AsyncSession = Depends(get_db_session),
 ):
-    event, _alert, tag = await find_event(session, event_id, finder_token)
-    if not tag.contact_reveal_enabled:
-        raise HTTPException(403, "연락처를 확인할 수 없습니다.")
+    event, alert, tag = await find_event(session, event_id, finder_token)
+    available_at = event.requested_at + timedelta(minutes=settings.nfc_contact_reveal_delay_minutes)
+    if alert.safety_confirmed_at is not None:
+        raise HTTPException(409, "보호자가 이미 확인했습니다.")
+    if not tag.contact_reveal_enabled or utc_now() < available_at:
+        raise HTTPException(403, "아직 연락처를 확인할 수 없습니다.")
     event.contact_revealed_at = event.contact_revealed_at or utc_now()
     await session.flush()
     return NfcContactResponse(guardian_phone=tag.guardian_phone)
