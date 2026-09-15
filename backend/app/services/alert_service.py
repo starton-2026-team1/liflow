@@ -41,11 +41,7 @@ async def mark_alert_read(session: AsyncSession, alert_id: int, user_id: int) ->
 async def confirm_alert_safety(session: AsyncSession, alert_id: int, user_id: int) -> Alert:
     alert = await find_alert_or_404(session, alert_id, user_id)
     now = utc_now()
-    if alert.read_at is None:
-        alert.read_at = now
-    if alert.safety_confirmed_at is None:
-        alert.safety_confirmed_at = now
-    await session.flush()
+    await confirm_all_owned_alerts(session, user_id, now)
     await session.refresh(alert)
     return alert
 
