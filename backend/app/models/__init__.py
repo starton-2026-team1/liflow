@@ -1,6 +1,8 @@
 from app.models.alert import Alert
 from app.models.base import Base
 from app.models.chat_message import ChatMessage
+from app.models.fcm_device_token import FcmDeviceToken
+from app.models.nfc_tag import NfcHelpEvent, NfcTag
 from app.models.person import Person
 from app.models.person_status_event import PersonStatusEvent
 from app.models.push_subscription import PushSubscription
@@ -13,6 +15,9 @@ __all__ = [
     "Alert",
     "Base",
     "ChatMessage",
+    "FcmDeviceToken",
+    "NfcHelpEvent",
+    "NfcTag",
     "Person",
     "PersonStatusEvent",
     "PushSubscription",

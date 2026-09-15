@@ -31,6 +31,9 @@ class Settings(BaseSettings):
     web_push_vapid_public_key: str = ""
     web_push_vapid_private_key: str = ""
     web_push_vapid_subject: str = "mailto:admin@example.com"
+    firebase_credentials_path: str = ""
+    public_frontend_url: str = "http://ec2-32-236-226-35.ap-southeast-2.compute.amazonaws.com"
+    nfc_contact_reveal_delay_minutes: int = 5
 
     @property
     def allowed_cors_origins(self) -> list[str]:
