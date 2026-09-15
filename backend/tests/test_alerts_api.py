@@ -72,7 +72,6 @@ async def test_duplicate_external_alert_is_suppressed(
     assert duplicate.json()["id"] == first.json()["id"]
 
 
-<<<<<<< HEAD
 async def test_person_safety_confirmation_confirms_all_active_alerts(
     client: AsyncClient, auth_headers: dict[str, str]
 ) -> None:
@@ -104,7 +103,8 @@ async def test_person_safety_confirmation_confirms_all_active_alerts(
     )
     assert remaining.json()[0]["id"] == other.json()["id"]
     assert remaining.json()[0]["safety_confirmed_at"] is None
-=======
+
+
 async def test_single_safety_confirmation_also_confirms_all_owned_alerts(
     client: AsyncClient, auth_headers: dict[str, str]
 ) -> None:
@@ -154,7 +154,6 @@ async def test_confirm_all_alert_safety_only_updates_owned_alerts(
     assert (
         await client.post("/api/v1/alerts/safety-confirmations", headers=auth_headers)
     ).json() == {"count": 0}
->>>>>>> fabae5b951d7884041490ded438c2d534cae99d1
 
 
 async def test_alert_access_is_limited_to_person_owner(

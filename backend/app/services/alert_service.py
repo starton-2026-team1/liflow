@@ -47,7 +47,6 @@ async def confirm_alert_safety(session: AsyncSession, alert_id: int, user_id: in
     return alert
 
 
-<<<<<<< HEAD
 async def confirm_person_safety(session: AsyncSession, person_id: int, user_id: int) -> list[Alert]:
     person = await get_owned_person(session, person_id, user_id)
     if person is None:
@@ -63,10 +62,10 @@ async def confirm_person_safety(session: AsyncSession, person_id: int, user_id: 
     for alert in alerts:
         await session.refresh(alert)
     return alerts
-=======
+
+
 async def confirm_all_alert_safety(session: AsyncSession, user_id: int) -> int:
     return await confirm_all_owned_alerts(session, user_id, utc_now())
->>>>>>> fabae5b951d7884041490ded438c2d534cae99d1
 
 
 async def create_external_alert(

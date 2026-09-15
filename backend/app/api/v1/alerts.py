@@ -13,11 +13,8 @@ from app.schemas.alert import (
 from app.services.alert_notification_service import notify_alert
 from app.services.alert_service import (
     confirm_alert_safety,
-<<<<<<< HEAD
-    confirm_person_safety,
-=======
     confirm_all_alert_safety,
->>>>>>> fabae5b951d7884041490ded438c2d534cae99d1
+    confirm_person_safety,
     create_external_alert,
     mark_alert_read,
 )
@@ -81,21 +78,17 @@ async def confirm_safety(
     return await confirm_alert_safety(session, alert_id, current_user.id)
 
 
-<<<<<<< HEAD
-@router.post("/safety-confirmations", response_model=list[AlertResponse])
-async def confirm_all_safety(
-    person_id: int,
-    current_user: CurrentUser,
-    session: AsyncSession = Depends(get_db_session),
-) -> list[AlertResponse]:
-    return await confirm_person_safety(session, person_id, current_user.id)
-=======
-@router.post("/safety-confirmations", response_model=AlertSafetyConfirmationCount)
+@router.post(
+    "/safety-confirmations",
+    response_model=list[AlertResponse] | AlertSafetyConfirmationCount,
+)
 async def confirm_all_safety(
     current_user: CurrentUser,
+    person_id: int | None = None,
     session: AsyncSession = Depends(get_db_session),
-) -> AlertSafetyConfirmationCount:
+) -> list[AlertResponse] | AlertSafetyConfirmationCount:
+    if person_id is not None:
+        return await confirm_person_safety(session, person_id, current_user.id)
     return AlertSafetyConfirmationCount(
         count=await confirm_all_alert_safety(session, current_user.id)
     )
->>>>>>> fabae5b951d7884041490ded438c2d534cae99d1
