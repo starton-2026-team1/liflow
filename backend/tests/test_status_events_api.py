@@ -37,9 +37,7 @@ async def _create_person_and_sensor(
 async def test_create_status_event_success(
     client: AsyncClient, auth_headers: dict[str, str]
 ) -> None:
-    person_id, _ = await _create_person_and_sensor(
-        client, auth_headers, device_id="STATUS-API-001"
-    )
+    person_id, _ = await _create_person_and_sensor(client, auth_headers, device_id="STATUS-API-001")
 
     response = await client.post(
         "/api/v1/status-events",
@@ -146,9 +144,7 @@ async def test_wrong_device_key_returns_unauthorized(client: AsyncClient) -> Non
 async def test_get_person_latest_status_with_data(
     client: AsyncClient, auth_headers: dict[str, str]
 ) -> None:
-    person_id, _ = await _create_person_and_sensor(
-        client, auth_headers, device_id="STATUS-API-006"
-    )
+    person_id, _ = await _create_person_and_sensor(client, auth_headers, device_id="STATUS-API-006")
     await client.post(
         "/api/v1/status-events",
         headers=DEVICE_HEADERS,
@@ -191,12 +187,8 @@ async def test_get_person_latest_status_without_data_returns_unknown(
     }
 
 
-async def test_status_history_pagination(
-    client: AsyncClient, auth_headers: dict[str, str]
-) -> None:
-    person_id, _ = await _create_person_and_sensor(
-        client, auth_headers, device_id="STATUS-API-008"
-    )
+async def test_status_history_pagination(client: AsyncClient, auth_headers: dict[str, str]) -> None:
+    person_id, _ = await _create_person_and_sensor(client, auth_headers, device_id="STATUS-API-008")
     base_time = datetime.now()
     for i in range(3):
         await client.post(
@@ -237,9 +229,7 @@ async def test_status_history_pagination(
 async def test_all_people_status_returns_latest_per_person(
     client: AsyncClient, auth_headers: dict[str, str]
 ) -> None:
-    person_id, _ = await _create_person_and_sensor(
-        client, auth_headers, device_id="STATUS-API-009"
-    )
+    person_id, _ = await _create_person_and_sensor(client, auth_headers, device_id="STATUS-API-009")
     await client.post(
         "/api/v1/status-events",
         headers=DEVICE_HEADERS,
@@ -255,9 +245,7 @@ async def test_all_people_status_returns_latest_per_person(
 
     assert response.status_code == 200
     items = response.json()
-    assert any(
-        item["person_id"] == person_id and item["status"] == "ABNORMAL" for item in items
-    )
+    assert any(item["person_id"] == person_id and item["status"] == "ABNORMAL" for item in items)
 
 
 async def test_other_user_cannot_access_person_status(client: AsyncClient) -> None:
@@ -279,9 +267,7 @@ async def test_other_user_cannot_access_person_status(client: AsyncClient) -> No
     )
     person_id = person.json()["id"]
 
-    status_response = await client.get(
-        f"/api/v1/people/{person_id}/status", headers=other_headers
-    )
+    status_response = await client.get(f"/api/v1/people/{person_id}/status", headers=other_headers)
     history_response = await client.get(
         f"/api/v1/people/{person_id}/status/history", headers=other_headers
     )
@@ -345,8 +331,11 @@ async def test_status_change_publishes_websocket_event_and_repeat_does_not(
         )
         assert changed.status_code == 201
 
-        assert len(websocket.sent) == 2
-        assert websocket.sent[0] == {
+        status_messages = [
+            message for message in websocket.sent if message["type"] == "person_status_changed"
+        ]
+        assert len(status_messages) == 2
+        assert status_messages[0] == {
             "type": "person_status_changed",
             "payload": {
                 "person_id": person_id,
@@ -355,8 +344,9 @@ async def test_status_change_publishes_websocket_event_and_repeat_does_not(
                 "judged_at": base_time.isoformat(),
             },
         }
-        assert websocket.sent[1]["payload"]["previous_status"] == "NORMAL"
-        assert websocket.sent[1]["payload"]["status"] == "ABNORMAL"
+        assert status_messages[1]["payload"]["previous_status"] == "NORMAL"
+        assert status_messages[1]["payload"]["status"] == "ABNORMAL"
+        assert websocket.sent[2]["type"] == "alert.created"
     finally:
         await realtime_event_manager.disconnect(user_id, cast(Any, websocket))
 
@@ -390,8 +380,48 @@ async def test_status_change_does_not_notify_other_users(
             },
         )
 
-        assert len(owner_ws.sent) == 1
+        assert len(owner_ws.sent) == 2
+        assert owner_ws.sent[1]["type"] == "alert.created"
         assert other_ws.sent == []
     finally:
         await realtime_event_manager.disconnect(owner_id, cast(Any, owner_ws))
         await realtime_event_manager.disconnect(other_user_id, cast(Any, other_ws))
+
+
+async def test_abnormal_transition_creates_and_pushes_one_alert(
+    client: AsyncClient, auth_headers: dict[str, str], monkeypatch: Any
+) -> None:
+    pushed: list[tuple[int, dict[str, Any]]] = []
+
+    async def capture_push(_session: Any, user_id: int, payload: dict[str, Any]) -> None:
+        pushed.append((user_id, payload))
+
+    monkeypatch.setattr("app.api.v1.status_events.notify_alert", capture_push)
+    person_id, _ = await _create_person_and_sensor(
+        client, auth_headers, device_id="STATUS-API-PUSH-001"
+    )
+    base_time = datetime.now()
+
+    for index, status_value in enumerate(("NORMAL", "ABNORMAL", "ABNORMAL")):
+        response = await client.post(
+            "/api/v1/status-events",
+            headers=DEVICE_HEADERS,
+            json={
+                "event_id": f"status-api-push-{index}",
+                "device_id": "STATUS-API-PUSH-001",
+                "status": status_value,
+                "judged_at": (base_time + timedelta(minutes=index)).isoformat(),
+                "detected_value": "91.2",
+            },
+        )
+        assert response.status_code == 201
+
+    alerts = await client.get(
+        "/api/v1/alerts", params={"person_id": person_id}, headers=auth_headers
+    )
+    assert alerts.status_code == 200
+    assert len(alerts.json()) == 1
+    assert alerts.json()[0]["cause"] == "ABNORMAL_BEHAVIOR"
+    assert alerts.json()[0]["source"] == "AI"
+    assert len(pushed) == 1
+    assert pushed[0][1]["title"] == "이상행동 감지"

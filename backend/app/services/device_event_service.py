@@ -9,7 +9,7 @@ from app.repositories.sensor_event_repository import (
     get_sensor_event_by_external_id,
 )
 from app.repositories.sensor_repository import get_sensor_by_device_id
-from app.repositories.status_event_repository import create_status_event
+from app.repositories.status_event_repository import create_status_event, get_latest_status_event
 from app.schemas.sensor_event import DeviceEventCreate
 from app.schemas.status_event import StatusEventCreate
 from app.services.ai_service import predict_anomaly
@@ -18,19 +18,16 @@ from app.services.alert_service import utc_now
 
 async def record_device_event(
     session: AsyncSession, data: DeviceEventCreate
-) -> tuple[SensorEvent, bool]:
+) -> tuple[SensorEvent, bool, bool]:
     sensor = await get_sensor_by_device_id(session, data.device_id)
     if sensor is None:
         raise AppError(ErrorCode.SENSOR_NOT_FOUND)
 
     existing = await get_sensor_event_by_external_id(session, data.event_id)
     if existing is not None:
-        if (
-            existing.sensor_id != sensor.id
-            or existing.detected_value != data.detected_value
-        ):
+        if existing.sensor_id != sensor.id or existing.detected_value != data.detected_value:
             raise AppError(ErrorCode.EVENT_ID_CONFLICT)
-        return existing, False
+        return existing, False, False
 
     if sensor.status.upper() != "CONNECTED":
         raise AppError(ErrorCode.SENSOR_NOT_CONNECTED)
@@ -40,6 +37,9 @@ async def record_device_event(
         ai_result = predict_anomaly(float(data.detected_value))
     except (ValueError, TypeError):
         pass
+
+    previous_status_event = await get_latest_status_event(session, sensor.person_id)
+    previous_status = previous_status_event.status if previous_status_event is not None else None
 
     try:
         async with session.begin_nested():
@@ -72,14 +72,14 @@ async def record_device_event(
                     person_id=sensor.person_id,
                     sensor_id=sensor.id,
                 )
-        return event, True
+        became_abnormal = bool(
+            ai_result is not None and ai_result["is_anomaly"] and previous_status != "ABNORMAL"
+        )
+        return event, True, became_abnormal
     except IntegrityError as exc:
         existing = await get_sensor_event_by_external_id(session, data.event_id)
         if existing is None:
             raise
-        if (
-            existing.sensor_id != sensor.id
-            or existing.detected_value != data.detected_value
-        ):
+        if existing.sensor_id != sensor.id or existing.detected_value != data.detected_value:
             raise AppError(ErrorCode.EVENT_ID_CONFLICT) from exc
-        return existing, False
+        return existing, False, False
