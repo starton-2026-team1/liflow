@@ -2,7 +2,7 @@ import { Phone } from 'lucide-react'
 import mascotAlert from '../../../assets/mascot/alert.png'
 import '../styles/nfcAlam.css'
 
-function NfcGuardianContactPage({ guardianName = '보호자', guardianPhone = '010-1234-5678' }) {
+function NfcGuardianContactPage({ guardianPhone = '010-1234-5678' }) {
   const phoneHref = `tel:${guardianPhone.replace(/[^0-9+]/g, '')}`
 
   return (
@@ -26,7 +26,7 @@ function NfcGuardianContactPage({ guardianName = '보호자', guardianPhone = '0
           </p>
 
           <div className="nfc-alarm__contact-card" aria-label="보호자 연락처">
-            <span>{guardianName} 연락처</span>
+            <span>보호자 연락처</span>
             <strong>{guardianPhone}</strong>
           </div>
         </div>
