@@ -115,6 +115,65 @@
   transform: translateY(1px);
 }
 
+.nfc-alarm--contact {
+  background:
+    radial-gradient(circle at 50% 31%, rgb(255 99 106 / 12%) 0, rgb(255 99 106 / 0%) 35%),
+    var(--color-background);
+}
+
+.nfc-alarm__image-wrap--contact::before {
+  background: #fff1f1;
+}
+
+.nfc-alarm__image-wrap--contact .nfc-alarm__pulse {
+  border-color: rgb(255 99 106 / 15%);
+}
+
+.nfc-alarm__eyebrow--urgent {
+  color: #e14d57;
+}
+
+.nfc-alarm__contact-card {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 25px;
+  padding: 19px 20px;
+  border: 1px solid #f0dfe1;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgb(77 32 37 / 6%);
+  text-align: left;
+}
+
+.nfc-alarm__contact-card span {
+  color: var(--color-placeholder);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.nfc-alarm__contact-card strong {
+  color: var(--color-text);
+  font-size: 18px;
+  letter-spacing: -.35px;
+}
+
+.nfc-alarm__button--call {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  background: #e14d57;
+  box-shadow: 0 8px 20px rgb(225 77 87 / 22%);
+  text-decoration: none;
+}
+
+.nfc-alarm__button--call svg {
+  width: 19px;
+  height: 19px;
+}
+
 @keyframes nfc-alarm-pulse {
   0% { opacity: 0; transform: scale(.8); }
   25% { opacity: 1; }
@@ -133,6 +192,11 @@
 
   .nfc-alarm__description {
     margin-top: 10px;
+  }
+
+  .nfc-alarm__contact-card {
+    margin-top: 15px;
+    padding-block: 15px;
   }
 }
 
