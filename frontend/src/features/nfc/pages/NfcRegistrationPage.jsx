@@ -9,7 +9,6 @@ const steps = [
   { field: 'tag', question: '안심태그를 휴대폰에 가까이 대 주세요.' },
   { field: 'personId', question: '누구의 안심태그인가요?' },
   { field: 'name', question: '안심태그 이름을 정해 주세요.' },
-  { field: 'guardianName', question: '보호자 이름을 입력해 주세요.' },
   { field: 'guardianPhone', question: '보호자 전화번호를 입력해 주세요.' },
   { field: 'write', question: '입력한 정보를 태그에 저장할게요.' },
 ]
@@ -17,7 +16,7 @@ const steps = [
 const isWebNfcSupported = typeof window !== 'undefined' && 'NDEFReader' in window
 
 function NfcRegistrationPage({ people, onBack, onRegister }) {
-  const [form, setForm] = useState({ personId: people[0]?.id || '', name: '', guardianName: '', guardianPhone: '', tagSerial: '' })
+  const [form, setForm] = useState({ personId: people[0]?.id || '', name: '', guardianPhone: '', tagSerial: '' })
   const [step, setStep] = useState(0)
   const [scanStatus, setScanStatus] = useState('idle')
   const [scanError, setScanError] = useState('')
@@ -155,7 +154,6 @@ function NfcRegistrationPage({ people, onBack, onRegister }) {
     }
     const inputSettings = {
       name: { placeholder: '예: 00의 안심태그', type: 'text' },
-      guardianName: { placeholder: '보호자 이름', type: 'text' },
       guardianPhone: { placeholder: '010-0000-0000', type: 'tel' },
     }
     const settings = inputSettings[current.field]

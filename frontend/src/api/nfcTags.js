@@ -5,7 +5,6 @@ export const createNfcTag = (data) => apiRequest('/nfc-tags', {
   body: JSON.stringify({
     person_id: Number(data.personId),
     name: data.name,
-    guardian_name: data.guardianName,
     guardian_phone: data.guardianPhone,
     contact_reveal_enabled: true,
   }),
