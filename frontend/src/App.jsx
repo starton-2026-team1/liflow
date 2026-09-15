@@ -5,6 +5,7 @@ import LoginPage from './features/auth/pages/LoginPage'
 import SignUpPage from './features/auth/pages/SignUpPage'
 import MainPage from './features/main/pages/MainPage'
 import HomeDashboard from './features/main/components/HomeDashboard'
+import NfcHelpPage from './features/nfc/pages/NfcHelpPage'
 
 const previewPerson = {
   id: 'preview-person',
@@ -128,6 +129,8 @@ function AuthenticatedApp() {
 }
 
 function App() {
+  const nfcMatch = window.location.pathname.match(/^\/nfc\/help\/([^/]+)$/)
+  if (nfcMatch) return <NfcHelpPage token={decodeURIComponent(nfcMatch[1])} />
   const isAnomalyPreview = new URLSearchParams(window.location.search).get('preview') === 'anomalies'
   return isAnomalyPreview ? <AnomalyCardsPreview /> : <AuthenticatedApp />
 }
