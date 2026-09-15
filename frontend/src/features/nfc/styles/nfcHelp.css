@@ -1,0 +1,8 @@
+.nfc-help-page { min-height: 100vh; display: grid; place-items: center; padding: 24px; background: #f5f8f7; }
+.nfc-help-card { width: min(100%, 440px); padding: 32px 24px; border-radius: 24px; background: white; box-shadow: 0 12px 40px #183c3020; text-align: center; }
+.nfc-help-badge { color: #19815d; font-weight: 700; }
+.nfc-help-card h1 { margin: 18px 0 10px; }
+.nfc-help-card p { color: #60706a; line-height: 1.6; }
+.nfc-help-card button, .nfc-help-phone { display: block; width: 100%; margin-top: 24px; padding: 16px; border: 0; border-radius: 14px; background: #19815d; color: white; font: inherit; font-weight: 700; text-decoration: none; }
+.nfc-help-card button.secondary { background: #fff2dc; color: #8a5600; }
+.nfc-help-error { color: #b42318 !important; }

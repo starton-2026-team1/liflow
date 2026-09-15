@@ -3,6 +3,7 @@ import { Check, CheckCircle2, LoaderCircle, Nfc } from 'lucide-react'
 import StepFormLayout from '../../../components/common/StepFormLayout'
 import UnderlinedInput from '../../../components/common/UnderlinedInput'
 import '../styles/nfcRegistration.css'
+import { createNfcTag } from '../../../api/nfcTags'
 
 const steps = [
   { field: 'tag', question: '안심태그를 휴대폰에 가까이 대 주세요.' },
@@ -69,16 +70,13 @@ function NfcRegistrationPage({ people, onBack, onRegister }) {
     }
     setWriteStatus('writing')
     try {
+      const registered = await createNfcTag(form)
       const reader = new window.NDEFReader()
       await reader.write({
         records: [
           {
-            recordType: 'text',
-            data: [
-              `안심태그: ${form.name}`,
-              `보호자: ${form.guardianName}`,
-              `연락처: ${form.guardianPhone}`,
-            ].join('\n'),
+            recordType: 'url',
+            data: registered.public_url,
           },
         ],
       })
