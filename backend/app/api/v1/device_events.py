@@ -32,7 +32,7 @@ async def create_device_event(
     owner_id = await get_person_owner_id(session, event.person_id)
     alert = None
     if became_abnormal:
-        alert = await create_ai_abnormal_alert(
+        alert, alert_created = await create_ai_abnormal_alert(
             session,
             person_id=event.person_id,
             sensor_id=event.sensor_id,
@@ -40,6 +40,8 @@ async def create_device_event(
             occurred_at=data.detected_at,
             detected_value=data.detected_value,
         )
+        if not alert_created:
+            alert = None
     await session.commit()
     if owner_id is not None:
         event_response = DeviceEventResponse.model_validate(event)
