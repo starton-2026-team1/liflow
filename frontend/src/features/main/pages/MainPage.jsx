@@ -16,7 +16,7 @@ import {
   X,
 } from 'lucide-react'
 import { createPerson, deletePerson, getPeople, updatePerson, updatePersonMonitoringStatus } from '../../../api/people'
-import { confirmAlertSafety, getAlerts } from '../../../api/alerts'
+import { confirmAllAlertSafety, getAlerts } from '../../../api/alerts'
 import { connectSensorEventStream } from '../../../api/realtimeEvents'
 import { getSensorEvents } from '../../../api/sensorEvents'
 import { connectSensor, createSensor, deleteSensor, disconnectSensor, getSensors, updateSensor } from '../../../api/sensors'
@@ -667,10 +667,8 @@ function MainPage({ onLogout, onUserUpdate, user }) {
     if (!alert || alert.id === 'preview') return
     setConfirmingAlertId(alert.id)
     try {
-      const confirmedAlert = await confirmAlertSafety(alert.id)
-      setAlerts((alerts) => alerts.map((item) => (
-        item.id === confirmedAlert.id ? confirmedAlert : item
-      )))
+      await confirmAllAlertSafety(alert.personId)
+      setAlerts(await getAlerts())
     } catch (error) {
       setApiError(error.message || '안전 확인을 처리하지 못했어요.')
     } finally {
