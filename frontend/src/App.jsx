@@ -7,6 +7,7 @@ import MainPage from './features/main/pages/MainPage'
 import HomeDashboard from './features/main/components/HomeDashboard'
 import NfcHelpPage from './features/nfc/pages/NfcHelpPage'
 import NfcalamPage from './features/nfc/pages/NfcalamPage'
+import NfcGuardianContactPage from './features/nfc/pages/NfcGuardianContactPage'
 
 const previewPerson = {
   id: 'preview-person',
@@ -136,6 +137,7 @@ function App() {
 
   if (preview === 'anomalies') return <AnomalyCardsPreview />
   if (preview === 'nfc-alarm') return <NfcalamPage onConfirm={() => window.history.back()} />
+  if (preview === 'nfc-contact') return <NfcGuardianContactPage />
 
   return <AuthenticatedApp />
 }
