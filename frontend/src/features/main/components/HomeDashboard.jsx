@@ -162,7 +162,8 @@ function WarningStatus({ isConfirmingSafety, model, onConfirmSafety }) {
           onClick={() => onConfirmSafety(warning.alert)}
           disabled={isConfirmingSafety}
         >
-          <ShieldCheck aria-hidden="true" />{isConfirmingSafety ? '확인 처리 중...' : '안전을 확인했어요'}
+          <ShieldCheck aria-hidden="true" />
+          {isConfirmingSafety ? '전체 확인 처리 중...' : '모든 알림 안전 확인'}
         </button>
       </div>
 
