@@ -69,7 +69,11 @@ async def create_tag(
     if await get_owned_person(session, data.person_id, current_user.id) is None:
         raise HTTPException(404, "Person not found")
     token = token_urlsafe(32)
-    tag = NfcTag(**data.model_dump(), public_token_hash=digest(token))
+    tag = NfcTag(
+        **data.model_dump(),
+        guardian_name="보호자",
+        public_token_hash=digest(token),
+    )
     session.add(tag)
     await session.flush()
     return NfcTagResponse(
@@ -153,4 +157,4 @@ async def reveal_contact(
         raise HTTPException(403, "아직 연락처를 확인할 수 없습니다.")
     event.contact_revealed_at = event.contact_revealed_at or utc_now()
     await session.flush()
-    return NfcContactResponse(guardian_name=tag.guardian_name, guardian_phone=tag.guardian_phone)
+    return NfcContactResponse(guardian_phone=tag.guardian_phone)

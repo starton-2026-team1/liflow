@@ -34,7 +34,7 @@ function NfcHelpPage({ token }) {
     {event && !status?.acknowledged && <><strong>보호자에게 알림을 보냈습니다.</strong><p>보호자의 확인을 기다리고 있어요.</p></>}
     {status?.acknowledged && <strong>보호자가 확인했습니다. 도와주셔서 감사합니다.</strong>}
     {status?.contact_available && !contact && <button className="secondary" type="button" onClick={reveal}>긴급 연락처 확인</button>}
-    {contact && <a className="nfc-help-phone" href={`tel:${contact.guardian_phone}`}>{contact.guardian_name} 보호자에게 전화하기<br />{contact.guardian_phone}</a>}
+    {contact && <a className="nfc-help-phone" href={`tel:${contact.guardian_phone}`}>보호자에게 전화하기<br />{contact.guardian_phone}</a>}
     {error && <p className="nfc-help-error">{error}</p>}
   </section></main>
 }
