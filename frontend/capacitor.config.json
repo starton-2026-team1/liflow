@@ -1,8 +1,15 @@
 {
   "appId": "com.starton.guardian",
-  "appName": "살핌이",
+  "appName": "liflow",
   "webDir": "dist",
+  "android": {
+    "allowMixedContent": true
+  },
   "server": {
-    "androidScheme": "https"
+    "androidScheme": "https",
+    "cleartext": true,
+    "allowNavigation": [
+      "ec2-32-236-226-35.ap-southeast-2.compute.amazonaws.com"
+    ]
   }
 }
